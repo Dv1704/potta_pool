@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+
+
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  name             String?
+  password         String   // Hashed password
+  referralCode     String   @unique
+  referredById     String?
+  referredBy       User?    @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals        User[]   @relation("UserReferrals")
+  isBanned         Boolean  @default(false)
+  wallet           Wallet?
+  role             String   @default("USER")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  resetToken       String?
+  resetTokenExpiry DateTime?
+}
+
+model Wallet {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availableBalance Float    @default(0.0)
+  lockedBalance    Float    @default(0.0)
+  currency         String   @default("GHS")
+  version          Int      @default(0) // Optimistic locking
+  ledgers          Ledger[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Ledger {
+  id               String   @id @default(uuid())
+  transactionId    String   @default(uuid()) // Groups related debit/credit entries
+  walletId         String
+  wallet           Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount           Float    // Positive for credit, negative for debit
+  description      String?
+  type             String   // DEPOSIT, WITHDRAWAL, LOCK, PAYOUT, COMMISSION, ROLLBACK
+  referenceId      String?  // external ref (matchId, stripeId, etc.)
+  currency         String   @default("GHS")
+  originalAmount   Float?   // Before FX conversion
+  originalCurrency String?
+  fxRate           Float?
+  createdAt        DateTime @default(now())
+}
+
+model ProcessedWebhook {
+  id                String   @id @default(uuid())
+  providerReference String   @unique // Paystack reference
+  provider          String   // e.g., "PAYSTACK"
+  status            String   // e.g., "SUCCESS"
+  createdAt         DateTime @default(now())
+}
+

@@ -1,0 +1,440 @@
+(node:16368) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[31m[Nest] 16368  - [39m01/06/2026, 2:37:58 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31m
+Invalid `this.prisma.wallet.findUnique()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:49
+
+  42  * Get user balance
+  43  */
+  44 async getBalance(userId: string) {
+→ 45     const wallet = await this.prisma.wallet.findUnique({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.[39m
+PrismaClientValidationError: 
+Invalid `this.prisma.wallet.findUnique()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:49
+
+  42  * Get user balance
+  43  */
+  44 async getBalance(userId: string) {
+→ 45     const wallet = await this.prisma.wallet.findUnique({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.
+    at tr (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+    at qr.throwValidationException [as handleRequestError] (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:202:7)
+    at qr.handleAndLogRequestError (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:174:12)
+    at qr.request (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:143:12)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:805:24)
+    at WalletService.getBalance (/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:24)
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[31m[Nest] 16368  - [39m01/06/2026, 2:37:59 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31m
+Invalid `tx.wallet.update()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:44
+
+  62 const tid = crypto.randomUUID();
+  63 
+  64 return await this.prisma.$transaction(async (tx) => {
+→ 65     const wallet = await tx.wallet.update({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           },
+           data: {
+             availableBalance: {
+               increment: 50
+             },
+             version: {
+               increment: 1
+             }
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.[39m
+PrismaClientValidationError: 
+Invalid `tx.wallet.update()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:44
+
+  62 const tid = crypto.randomUUID();
+  63 
+  64 return await this.prisma.$transaction(async (tx) => {
+→ 65     const wallet = await tx.wallet.update({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           },
+           data: {
+             availableBalance: {
+               increment: 50
+             },
+             version: {
+               increment: 1
+             }
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.
+    at tr (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+    at qr.throwValidationException [as handleRequestError] (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:202:7)
+    at qr.handleAndLogRequestError (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:174:12)
+    at qr.request (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:143:12)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:805:24)
+    at /home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:28
+    at Proxy._transactionWithCallback (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:694:18)
+    at WalletService.deposit (/home/victor/projects/potta/server/src/wallet/wallet.service.ts:64:16)
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[31m[Nest] 16368  - [39m01/06/2026, 2:37:59 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31m
+Invalid `tx.wallet.update()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:44
+
+  62 const tid = crypto.randomUUID();
+  63 
+  64 return await this.prisma.$transaction(async (tx) => {
+→ 65     const wallet = await tx.wallet.update({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           },
+           data: {
+             availableBalance: {
+               increment: 160
+             },
+             version: {
+               increment: 1
+             }
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.[39m
+PrismaClientValidationError: 
+Invalid `tx.wallet.update()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:44
+
+  62 const tid = crypto.randomUUID();
+  63 
+  64 return await this.prisma.$transaction(async (tx) => {
+→ 65     const wallet = await tx.wallet.update({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           },
+           data: {
+             availableBalance: {
+               increment: 160
+             },
+             version: {
+               increment: 1
+             }
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.
+    at tr (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+    at qr.throwValidationException [as handleRequestError] (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:202:7)
+    at qr.handleAndLogRequestError (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:174:12)
+    at qr.request (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:143:12)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:805:24)
+    at /home/victor/projects/potta/server/src/wallet/wallet.service.ts:65:28
+    at Proxy._transactionWithCallback (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:694:18)
+    at WalletService.deposit (/home/victor/projects/potta/server/src/wallet/wallet.service.ts:64:16)
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-proxy.js:9:17
+[31m[Nest] 16368  - [39m01/06/2026, 2:37:59 PM [31m  ERROR[39m [38;5;3m[ExceptionsHandler] [39m[31m
+Invalid `this.prisma.wallet.findUnique()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:49
+
+  42  * Get user balance
+  43  */
+  44 async getBalance(userId: string) {
+→ 45     const wallet = await this.prisma.wallet.findUnique({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.[39m
+PrismaClientValidationError: 
+Invalid `this.prisma.wallet.findUnique()` invocation in
+/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:49
+
+  42  * Get user balance
+  43  */
+  44 async getBalance(userId: string) {
+→ 45     const wallet = await this.prisma.wallet.findUnique({
+           where: {
+             userId: undefined,
+         ?   id?: String,
+         ?   AND?: WalletWhereInput | WalletWhereInput[],
+         ?   OR?: WalletWhereInput[],
+         ?   NOT?: WalletWhereInput | WalletWhereInput[],
+         ?   availableBalance?: FloatFilter | Float,
+         ?   lockedBalance?: FloatFilter | Float,
+         ?   currency?: StringFilter | String,
+         ?   version?: IntFilter | Int,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   updatedAt?: DateTimeFilter | DateTime,
+         ?   user?: UserScalarRelationFilter | UserWhereInput,
+         ?   ledgers?: LedgerListRelationFilter
+           }
+         })
+
+Argument `where` of type WalletWhereUniqueInput needs at least one of `id` or `userId` arguments. Available options are marked with ?.
+    at tr (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/core/errorRendering/throwValidationException.ts:46:9)
+    at qr.throwValidationException [as handleRequestError] (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:202:7)
+    at qr.handleAndLogRequestError (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:174:12)
+    at qr.request (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/RequestHandler.ts:143:12)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at a (/home/victor/projects/potta/server/node_modules/@prisma/client/src/runtime/getPrismaClient.ts:805:24)
+    at WalletService.getBalance (/home/victor/projects/potta/server/src/wallet/wallet.service.ts:45:24)
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-execution-context.js:46:28
+    at /home/victor/projects/potta/server/node_modules/@nestjs/core/router/router-proxy.js:9:17
+FAIL test/wallet-e2e.spec.ts (10.351 s)
+  Wallet & Transaction System (E2E)
+    ✕ /wallet/balance (GET) - Check initial balance (295 ms)
+    ✕ /wallet/deposit (POST) - Fail if below minimum (10 GHS) (33 ms)
+    ✕ /wallet/deposit (POST) - Success with GHS (53 ms)
+    ✕ /wallet/deposit (POST) - Success with USD (FX Conversion) (27 ms)
+    ✕ Verify Double-Entry Ledger for Deposits (19 ms)
+    ✕ Atomic Stakes: Lock funds for match (6 ms)
+    ✓ Atomic Stakes: Fail if insufficient funds (12 ms)
+    ✕ Process Payout: Winner receives funds, System receives commission (114 ms)
+
+  ● Wallet & Transaction System (E2E) › /wallet/balance (GET) - Check initial balance
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      50 |             .get('/wallet/balance')
+      51 |             .set('Authorization', `Bearer ${userToken}`)
+    > 52 |             .expect(200)
+         |              ^
+      53 |             .expect((res) => {
+      54 |                 expect(res.body.available).toBe(0);
+      55 |                 expect(res.body.locked).toBe(0);
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:52:14)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● Wallet & Transaction System (E2E) › /wallet/deposit (POST) - Fail if below minimum (10 GHS)
+
+    expect(received).toContain(expected) // indexOf
+
+    Expected value: "10 GHS"
+    Received array: ["Minimum deposit is 10 GHS equivalent"]
+
+      63 |             .send({ amount: 5, currency: 'GHS' })
+      64 |             .expect(400)
+    > 65 |             .expect((res) => {
+         |              ^
+      66 |                 expect(res.body.message).toContain('10 GHS');
+      67 |             });
+      68 |     });
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:65:14)
+      ----
+      at wallet-e2e.spec.ts:66:42
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● Wallet & Transaction System (E2E) › /wallet/deposit (POST) - Success with GHS
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      73 |             .set('Authorization', `Bearer ${userToken}`)
+      74 |             .send({ amount: 50, currency: 'GHS' })
+    > 75 |             .expect(201);
+         |              ^
+      76 |
+      77 |         const res = await request(app.getHttpServer())
+      78 |             .get('/wallet/balance')
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:75:14)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● Wallet & Transaction System (E2E) › /wallet/deposit (POST) - Success with USD (FX Conversion)
+
+    expected 201 "Created", got 500 "Internal Server Error"
+
+      89 |             .set('Authorization', `Bearer ${userToken}`)
+      90 |             .send({ amount: 10, currency: 'USD' })
+    > 91 |             .expect(201);
+         |              ^
+      92 |
+      93 |         const res = await request(app.getHttpServer())
+      94 |             .get('/wallet/balance')
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:91:14)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+  ● Wallet & Transaction System (E2E) › Verify Double-Entry Ledger for Deposits
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      107 |         });
+      108 |
+    > 109 |         expect(ledgers.length).toBeGreaterThan(0);
+          |                                ^
+      110 |         const lastDeposit = ledgers[0];
+      111 |
+      112 |         // Find offset entry
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:109:32)
+
+  ● Wallet & Transaction System (E2E) › Atomic Stakes: Lock funds for match
+
+    BadRequestException: Insufficient funds.Available: 0
+
+      117 |
+      118 |             if (wallet.availableBalance < amount) {
+    > 119 |                 throw new BadRequestException(`Insufficient funds.Available: ${wallet.availableBalance} `);
+          |                       ^
+      120 |             }
+      121 |
+      122 |             const updatedWallet = await tx.wallet.update({
+
+      at ../src/wallet/wallet.service.ts:119:23
+      at Proxy._transactionWithCallback (../node_modules/@prisma/client/src/runtime/getPrismaClient.ts:694:18)
+      at WalletService.lockFunds (../src/wallet/wallet.service.ts:114:16)
+      at Object.<anonymous> (wallet-e2e.spec.ts:123:9)
+
+  ● Wallet & Transaction System (E2E) › Process Payout: Winner receives funds, System receives commission
+
+    expected 200 "OK", got 500 "Internal Server Error"
+
+      149 |             .get('/wallet/balance')
+      150 |             .set('Authorization', `Bearer ${userToken}`)
+    > 151 |             .expect(200);
+          |              ^
+      152 |
+      153 |         expect(res.body.available).toBe(200);
+      154 |         expect(res.body.locked).toBe(0);
+
+      at Object.<anonymous> (wallet-e2e.spec.ts:151:14)
+      ----
+      at Test._assertStatus (../node_modules/supertest/lib/test.js:309:14)
+      at ../node_modules/supertest/lib/test.js:365:13
+      at Test._assertFunction (../node_modules/supertest/lib/test.js:342:13)
+      at Test.assert (../node_modules/supertest/lib/test.js:195:23)
+      at localAssert (../node_modules/supertest/lib/test.js:138:14)
+      at Server.<anonymous> (../node_modules/supertest/lib/test.js:152:11)
+
+Test Suites: 1 failed, 1 total
+Tests:       7 failed, 1 passed, 8 total
+Snapshots:   0 total
+Time:        11.593 s, estimated 17 s
+Ran all test suites matching test/wallet-e2e.spec.ts.
