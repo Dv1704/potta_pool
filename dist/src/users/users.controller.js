@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Patch, Param, Body, UseGuards, Post, Request } from '@nestjs/common';
 import { UsersService } from './users.service.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Roles } from '../auth/guards/roles.decorator.js';
@@ -24,11 +24,17 @@ let UsersController = class UsersController {
     async banUser(id, isBanned) {
         return this.usersService.setBanStatus(id, isBanned);
     }
+    async toggleEmail(req, status) {
+        return this.usersService.toggleEmailVerification(req.user.id, status);
+    }
+    async toggle2FA(req, status) {
+        return this.usersService.toggleTwoFactor(req.user.id, status);
+    }
 };
 __decorate([
     UseGuards(JwtAuthGuard, RolesGuard),
     Roles('ADMIN'),
-    ApiBearerAuth(),
+    ApiBearerAuth('JWT-auth'),
     Patch(':id/ban'),
     ApiOperation({ summary: 'Ban or unban a user (Admin only)' }),
     ApiResponse({ status: 200, description: 'User ban status updated' }),
@@ -40,6 +46,30 @@ __decorate([
     __metadata("design:paramtypes", [String, Boolean]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "banUser", null);
+__decorate([
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
+    Post('verify-email') // Simulation endpoint
+    ,
+    ApiOperation({ summary: 'Toggle email verification status' }),
+    __param(0, Request()),
+    __param(1, Body('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Boolean]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "toggleEmail", null);
+__decorate([
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
+    Post('toggle-2fa') // Simulation endpoint
+    ,
+    ApiOperation({ summary: 'Toggle 2FA status' }),
+    __param(0, Request()),
+    __param(1, Body('status')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Boolean]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "toggle2FA", null);
 UsersController = __decorate([
     ApiTags('Users'),
     Controller('users'),

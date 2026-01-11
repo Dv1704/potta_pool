@@ -1,4 +1,4 @@
-import { Vector2 } from './Vector2';
+import { Vector2 } from './Vector2.js';
 
 export class Edge {
     private m_pA: Vector2;

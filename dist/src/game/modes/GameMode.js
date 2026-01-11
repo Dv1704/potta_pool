@@ -1,4 +1,4 @@
-import { PoolEngine } from '../engine/PoolEngine';
+import { PoolEngine } from '../engine/PoolEngine.js';
 export class GameMode {
     engine;
     players; // [player1Id, player2Id]
@@ -17,5 +17,8 @@ export class GameMode {
     }
     getWinner() {
         return this.winner;
+    }
+    getBalls() {
+        return this.engine.getBalls();
     }
 }

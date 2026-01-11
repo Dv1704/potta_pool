@@ -56,6 +56,21 @@ let EmailService = class EmailService {
             throw error;
         }
     }
+    async sendEmail(to, subject, html) {
+        try {
+            const data = await this.resend.emails.send({
+                from: 'Potta <onboarding@resend.dev>',
+                to: [to],
+                subject,
+                html,
+            });
+            return data;
+        }
+        catch (error) {
+            console.error('Error sending email:', error);
+            throw error;
+        }
+    }
 };
 EmailService = __decorate([
     Injectable(),

@@ -1,4 +1,5 @@
-import { PoolEngine, ShotResult } from '../engine/PoolEngine';
+import { PoolEngine, ShotResult } from '../engine/PoolEngine.js';
+import { Ball } from '../engine/Ball.js';
 
 export interface GameState {
     balls: { [key: number]: { x: number; y: number; onTable: boolean } };
@@ -23,6 +24,8 @@ export abstract class GameMode {
     abstract handleShot(playerId: string, angle: number, power: number, sideSpin: number, backSpin: number): ShotResult;
     abstract updateStatus(): void;
     abstract getGameState(): GameState;
+    abstract serialize(): any;
+    abstract hydrate(state: any): void;
 
     public getPlayers(): string[] {
         return this.players;
@@ -34,5 +37,9 @@ export abstract class GameMode {
 
     public getWinner(): string | null {
         return this.winner;
+    }
+
+    public getBalls(): Ball[] {
+        return this.engine.getBalls();
     }
 }

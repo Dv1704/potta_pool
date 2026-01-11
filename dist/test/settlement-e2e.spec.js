@@ -19,8 +19,8 @@ describe('Financial Settlement & Atomic Ledger (E2E)', () => {
         // Cleanup
         await prisma.user.deleteMany({ where: { email: { in: ['u1@test.com', 'u2@test.com'] } } });
         // Create test users
-        const u1 = await prisma.user.create({ data: { email: 'u1@test.com', password: 'password', wallet: { create: { availableBalance: 50 } } } });
-        const u2 = await prisma.user.create({ data: { email: 'u2@test.com', password: 'password', wallet: { create: { availableBalance: 50 } } } });
+        const u1 = await prisma.user.create({ data: { email: 'u1@test.com', password: 'password', referralCode: 'REF_U1', wallet: { create: { availableBalance: 50 } } } });
+        const u2 = await prisma.user.create({ data: { email: 'u2@test.com', password: 'password', referralCode: 'REF_U2', wallet: { create: { availableBalance: 50 } } } });
         user1Id = u1.id;
         user2Id = u2.id;
     });

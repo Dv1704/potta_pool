@@ -1,6 +1,6 @@
-import { GameMode, GameState } from './GameMode';
-import { ShotResult } from '../engine/PoolEngine';
-import * as Constants from '../engine/Constants';
+import { GameMode, GameState } from './GameMode.js';
+import { ShotResult } from '../engine/PoolEngine.js';
+import * as Constants from '../engine/Constants.js';
 
 enum BallGroup {
     SOLIDS = 'solids',
@@ -29,61 +29,38 @@ export class TurnMode extends GameMode {
 
         this.processTurnResult(playerId, result);
 
-        // Switch turn if no balls pocketed or if a foul occurred
         if (result.pocketedBalls.length === 0 || this.foulOccurred) {
             this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
         }
 
         this.updateStatus();
-
         return result;
     }
 
     private processTurnResult(playerId: string, result: ShotResult) {
         const playerGroup = this.playerGroups[playerId];
+        if (result.cueBallScratched) this.foulOccurred = true;
+        if (result.firstBallCollided === null) this.foulOccurred = true;
 
-        // Foul: Scratch
-        if (result.cueBallScratched) {
-            this.foulOccurred = true;
-        }
-
-        // Foul: No Hit
-        if (result.firstBallCollided === null) {
-            this.foulOccurred = true;
-        }
-
-        // Foul: Hitting opponent's ball first
         if (this.groupAssigned && result.firstBallCollided !== null) {
             const firstHit = result.firstBallCollided;
             const is8Ball = firstHit === 8;
-
             let isCorrectGroup = false;
+
             if (playerGroup === BallGroup.SOLIDS) {
                 isCorrectGroup = firstHit >= 1 && firstHit <= 7;
             } else if (playerGroup === BallGroup.STRIPES) {
                 isCorrectGroup = firstHit >= 9 && firstHit <= 15;
             }
 
-            // If playing for 8-ball, hitting 8-ball first is okay
             const remainingInGroup = this.getRemainingBallsInGroup(playerGroup);
-            if (remainingInGroup === 0 && is8Ball) {
-                isCorrectGroup = true;
-            }
-
-            if (!isCorrectGroup) {
-                this.foulOccurred = true;
-            }
+            if (remainingInGroup === 0 && is8Ball) isCorrectGroup = true;
+            if (!isCorrectGroup) this.foulOccurred = true;
         }
 
-        // Foul: No Rail (simplified: at least one ball must hit rail OR pocket)
         const railHit = result.events.some(e => e.type === 'edge_collision');
-        if (!railHit && result.pocketedBalls.length === 0) {
-            // Actually the rule is: AFTER contact, at least one ball must hit a rail or be pocketed.
-            // My tracking already handles this if I check events.
-            this.foulOccurred = true;
-        }
+        if (!railHit && result.pocketedBalls.length === 0) this.foulOccurred = true;
 
-        // Rule: First ball pocketed assigns groups
         if (!this.foulOccurred && !this.groupAssigned && result.pocketedBalls.length > 0) {
             const firstPotted = result.pocketedBalls[0];
             if (firstPotted >= 1 && firstPotted <= 7) {
@@ -93,10 +70,7 @@ export class TurnMode extends GameMode {
             }
         }
 
-        // Check for 8-ball pocketing
-        if (result.pocketedBalls.includes(8)) {
-            this.handleEightBallPocketed(playerId);
-        }
+        if (result.pocketedBalls.includes(8)) this.handleEightBallPocketed(playerId);
     }
 
     private getRemainingBallsInGroup(group: BallGroup): number {
@@ -119,22 +93,14 @@ export class TurnMode extends GameMode {
     private handleEightBallPocketed(playerId: string) {
         this.isGameOver = true;
         const group = this.playerGroups[playerId];
-
-        // Check if player has cleared their group
-        const remainingInGroup = this.getRemainingBallsInGroup(group);
-
-        if (remainingInGroup === 0 && !this.foulOccurred) {
+        if (this.getRemainingBallsInGroup(group) === 0 && !this.foulOccurred) {
             this.winner = playerId;
         } else {
-            // 8-ball potted early or with foul -> opponent wins
             this.winner = this.players.find(id => id !== playerId)!;
         }
     }
 
-    updateStatus(): void {
-        // Check if only 8-ball and cue ball are left
-        // (Actual winner is determined only when 8-ball is potted)
-    }
+    updateStatus(): void { }
 
     getGameState(): GameState {
         const balls = this.engine.getBalls();
@@ -151,8 +117,37 @@ export class TurnMode extends GameMode {
             balls: ballStates,
             turn: this.players[this.currentTurnIndex],
             isGameOver: this.isGameOver,
-            winner: this.winner,
-            // Add group info to state if needed for UI
+            winner: this.winner
         };
+    }
+
+    serialize(): any {
+        return {
+            turnIndex: this.currentTurnIndex,
+            isGameOver: this.isGameOver,
+            winner: this.winner,
+            playerGroups: this.playerGroups,
+            groupAssigned: this.groupAssigned,
+            foulOccurred: this.foulOccurred,
+            balls: this.getGameState().balls
+        };
+    }
+
+    hydrate(state: any): void {
+        this.currentTurnIndex = state.turnIndex;
+        this.isGameOver = state.isGameOver;
+        this.winner = state.winner;
+        this.playerGroups = state.playerGroups;
+        this.groupAssigned = state.groupAssigned;
+        this.foulOccurred = state.foulOccurred;
+
+        const balls = this.getBalls();
+        for (const ball of balls) {
+            const bState = state.balls[ball.getNumber()];
+            if (bState) {
+                ball.setPos(bState.x, bState.y);
+                ball.setFlagOnTable(bState.onTable);
+            }
+        }
     }
 }

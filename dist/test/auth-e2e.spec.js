@@ -83,6 +83,7 @@ describe('Auth & User System (E2E)', () => {
                 password: hashedPassword,
                 name: 'Admin User',
                 role: 'ADMIN',
+                referralCode: 'ADMIN_REF',
             },
         });
         // Login as Admin

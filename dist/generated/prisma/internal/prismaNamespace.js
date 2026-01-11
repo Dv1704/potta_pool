@@ -69,7 +69,10 @@ export const AnyNull = runtime.AnyNull;
 export const ModelName = {
     User: 'User',
     Wallet: 'Wallet',
-    Ledger: 'Ledger'
+    Ledger: 'Ledger',
+    ProcessedWebhook: 'ProcessedWebhook',
+    Game: 'Game',
+    AdminAuditLog: 'AdminAuditLog'
 };
 /**
  * Enums
@@ -85,12 +88,17 @@ export const UserScalarFieldEnum = {
     email: 'email',
     name: 'name',
     password: 'password',
+    referralCode: 'referralCode',
+    referredById: 'referredById',
     isBanned: 'isBanned',
     role: 'role',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     resetToken: 'resetToken',
-    resetTokenExpiry: 'resetTokenExpiry'
+    resetTokenExpiry: 'resetTokenExpiry',
+    emailVerified: 'emailVerified',
+    phoneNumber: 'phoneNumber',
+    isTwoFactorEnabled: 'isTwoFactorEnabled'
 };
 export const WalletScalarFieldEnum = {
     id: 'id',
@@ -114,6 +122,32 @@ export const LedgerScalarFieldEnum = {
     originalAmount: 'originalAmount',
     originalCurrency: 'originalCurrency',
     fxRate: 'fxRate',
+    createdAt: 'createdAt'
+};
+export const ProcessedWebhookScalarFieldEnum = {
+    id: 'id',
+    providerReference: 'providerReference',
+    provider: 'provider',
+    status: 'status',
+    createdAt: 'createdAt'
+};
+export const GameScalarFieldEnum = {
+    id: 'id',
+    mode: 'mode',
+    stake: 'stake',
+    status: 'status',
+    players: 'players',
+    winnerId: 'winnerId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    version: 'version'
+};
+export const AdminAuditLogScalarFieldEnum = {
+    id: 'id',
+    adminId: 'adminId',
+    action: 'action',
+    targetUserId: 'targetUserId',
+    details: 'details',
     createdAt: 'createdAt'
 };
 export const SortOrder = {

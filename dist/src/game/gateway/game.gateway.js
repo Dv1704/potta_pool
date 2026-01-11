@@ -12,16 +12,20 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { WebSocketGateway, WebSocketServer, SubscribeMessage, MessageBody, ConnectedSocket, } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { MatchmakingService } from '../matchmaking/matchmaking.service';
-import { GameService } from '../services/game.service';
+import { MatchmakingService } from '../matchmaking/matchmaking.service.js';
+import { GameService } from '../services/game.service.js';
 import { v4 as uuidv4 } from 'uuid';
+import { WalletService } from '../../wallet/wallet.service.js';
 let GameGateway = class GameGateway {
     matchmakingService;
     gameService;
+    walletService;
     server;
-    constructor(matchmakingService, gameService) {
+    lastShotTime = new Map();
+    constructor(matchmakingService, gameService, walletService) {
         this.matchmakingService = matchmakingService;
         this.gameService = gameService;
+        this.walletService = walletService;
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
             const finishedGames = await this.gameService.checkAllTimeouts();
@@ -43,6 +47,12 @@ let GameGateway = class GameGateway {
         }
     }
     async handleJoinQueue(client, data) {
+        // 1. Insufficient Funds Guard
+        const balance = await this.walletService.getBalance(data.userId);
+        if (balance.available < data.stake) {
+            client.emit('error', { message: 'Insufficient funds for this stake' });
+            return;
+        }
         const match = await this.matchmakingService.addToQueue({
             userId: data.userId,
             socketId: client.id,
@@ -54,13 +64,14 @@ let GameGateway = class GameGateway {
             const playerIds = match.map((p) => p.userId);
             try {
                 await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
+                const game = await this.gameService.getGame(gameId);
                 match.forEach((p) => {
                     this.server.to(p.socketId).emit('matchFound', {
                         gameId,
                         opponentId: playerIds.find((id) => id !== p.userId),
                         mode: data.mode,
                         stake: data.stake,
-                        gameState: this.gameService.getGame(gameId)?.mode.getGameState()
+                        gameState: game?.mode.getGameState()
                     });
                 });
             }
@@ -75,9 +86,17 @@ let GameGateway = class GameGateway {
         }
     }
     async handleTakeShot(client, data) {
+        // 2. Input Throttling
+        const lastShot = this.lastShotTime.get(data.userId) || 0;
+        const now = Date.now();
+        if (now - lastShot < 1000) { // 1 second throttle
+            // client.emit('error', { message: 'Shooting too fast' }); // Optional: don't spam error
+            return;
+        }
+        this.lastShotTime.set(data.userId, now);
         try {
             const result = await this.gameService.handleShot(data.gameId, data.userId, data.angle, data.power, data.sideSpin || 0, data.backSpin || 0);
-            const game = this.gameService.getGame(data.gameId);
+            const game = await this.gameService.getGame(data.gameId);
             if (game) {
                 this.server.to(data.gameId).emit('shotResult', {
                     shotResult: result,
@@ -92,16 +111,11 @@ let GameGateway = class GameGateway {
     handleJoinGame(client, data) {
         client.join(data.gameId);
     }
-    handleGetGameState(client, data) {
-        const game = this.gameService.getGame(data.gameId);
+    async handleGetGameState(client, data) {
+        const game = await this.gameService.getGame(data.gameId);
         if (game) {
             const state = game.mode.getGameState();
             client.emit('gameState', state);
-            if (state.isGameOver) {
-                // Trigger any cleanup or payout logic if it ended due to timeout
-                // Actually handleShot usually does this, but for timeout we might need special handling
-                // For now, getGameState triggers the status update.
-            }
         }
     }
 };
@@ -139,11 +153,12 @@ __decorate([
     __param(1, MessageBody()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Socket, Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], GameGateway.prototype, "handleGetGameState", null);
 GameGateway = __decorate([
     WebSocketGateway({ cors: { origin: '*' } }),
     __metadata("design:paramtypes", [MatchmakingService,
-        GameService])
+        GameService,
+        WalletService])
 ], GameGateway);
 export { GameGateway };

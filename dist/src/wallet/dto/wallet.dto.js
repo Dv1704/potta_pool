@@ -8,24 +8,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNumber, IsString, IsPositive, Min, IsOptional } from 'class-validator';
-export class DepositDto {
-    amount;
-    currency;
-}
-__decorate([
-    ApiProperty({ example: 50.0 }),
-    IsNumber(),
-    IsPositive(),
-    Min(10, { message: 'Minimum deposit is 10 GHS equivalent' }),
-    __metadata("design:type", Number)
-], DepositDto.prototype, "amount", void 0);
-__decorate([
-    ApiProperty({ example: 'GHS', required: false }),
-    IsString(),
-    IsOptional(),
-    __metadata("design:type", String)
-], DepositDto.prototype, "currency", void 0);
 export class BalanceResponseDto {
     available;
     locked;

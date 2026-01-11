@@ -12,12 +12,24 @@ export interface PlayerInfo {
 export class MatchmakingService {
     constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) { }
 
-    private getQueueKey(mode: string, stake: number): string {
-        return `matchmaking:queue:${mode}:${stake}`;
+    private getBracket(stake: number): string {
+        // Define brackets: 1-5, 5-10, 10-15, 15-20, 20-50, 50-100, 100+
+        if (stake < 5) return '1-5';
+        if (stake < 10) return '5-10';
+        if (stake < 15) return '10-15';
+        if (stake < 20) return '15-20';
+        if (stake < 50) return '20-50';
+        if (stake < 100) return '50-100';
+        return '100+';
+    }
+
+    private getQueueKey(mode: string, bracket: string): string {
+        return `matchmaking:queue:${mode}:${bracket}`;
     }
 
     async addToQueue(player: PlayerInfo): Promise<PlayerInfo[] | null> {
-        const key = this.getQueueKey(player.mode, player.stake);
+        const bracket = this.getBracket(player.stake);
+        const key = this.getQueueKey(player.mode, bracket);
 
         // Check if player is already in queue (simplified check)
         const existing = await this.redis.lrange(key, 0, -1);

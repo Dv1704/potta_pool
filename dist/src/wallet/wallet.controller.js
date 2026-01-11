@@ -12,23 +12,50 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { WalletService } from './wallet.service.js';
+import { FXService } from './fx.service.js';
+import { TransferService } from './transfer.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { DepositDto, BalanceResponseDto } from './dto/wallet.dto.js';
+import { BalanceResponseDto } from './dto/wallet.dto.js';
+import { TransferDto, ConfirmTransferDto } from './dto/transfer.dto.js';
 let WalletController = class WalletController {
     walletService;
-    constructor(walletService) {
+    fxService;
+    transferService;
+    prisma;
+    constructor(walletService, fxService, transferService, prisma) {
         this.walletService = walletService;
+        this.fxService = fxService;
+        this.transferService = transferService;
+        this.prisma = prisma;
     }
     async getBalance(req) {
         return this.walletService.getBalance(req.user.id);
     }
-    async deposit(req, depositDto) {
-        return this.walletService.deposit(req.user.id, depositDto.amount, depositDto.currency);
+    async getHistory(req) {
+        return this.walletService.getHistory(req.user.id);
+    }
+    async getRates() {
+        return this.fxService.getLiveRates();
+    }
+    async initiateTransfer(req, dto) {
+        return this.transferService.initiateTransfer(req.user.id, dto.recipientIdentifier, dto.amount);
+    }
+    async confirmTransfer(req, dto) {
+        return this.transferService.confirmTransfer(req.user.id, dto.sessionId, dto.code);
+    }
+    async injectBalance(body) {
+        const user = await this.prisma.user.findUnique({ where: { email: body.email } });
+        if (!user)
+            return { error: 'User not found' };
+        return this.walletService.deposit(user.id, body.amount);
     }
 };
 __decorate([
     Get('balance'),
+    UseGuards(JwtAuthGuard),
     ApiOperation({ summary: 'Get current wallet balance' }),
     ApiResponse({ status: 200, type: BalanceResponseDto }),
     __param(0, Request()),
@@ -37,21 +64,64 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WalletController.prototype, "getBalance", null);
 __decorate([
-    Post('deposit'),
-    ApiOperation({ summary: 'Deposit funds into wallet' }),
-    ApiResponse({ status: 201, description: 'Deposit successful' }),
-    ApiResponse({ status: 400, description: 'Invalid amount or currency' }),
+    Get('history'),
+    UseGuards(JwtAuthGuard),
+    ApiOperation({ summary: 'Get transaction history' }),
+    ApiResponse({ status: 200, description: 'Returns ledger entries' }),
+    __param(0, Request()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WalletController.prototype, "getHistory", null);
+__decorate([
+    Get('rates'),
+    ApiOperation({ summary: 'Get live currency exchange rates' }),
+    ApiResponse({ status: 200, description: 'Returns current exchange rates with GHS as base' }),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], WalletController.prototype, "getRates", null);
+__decorate([
+    Post('transfer/initiate'),
+    UseGuards(JwtAuthGuard),
+    Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute
+    ,
+    ApiOperation({ summary: 'Initiate a transfer (may require 2FA)' }),
+    ApiResponse({ status: 200, description: 'Transfer initiated or 2FA required' }),
     __param(0, Request()),
     __param(1, Body()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, DepositDto]),
+    __metadata("design:paramtypes", [Object, TransferDto]),
     __metadata("design:returntype", Promise)
-], WalletController.prototype, "deposit", null);
+], WalletController.prototype, "initiateTransfer", null);
+__decorate([
+    Post('transfer/confirm'),
+    UseGuards(JwtAuthGuard),
+    Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 requests per minute
+    ,
+    ApiOperation({ summary: 'Confirm transfer with 2FA code' }),
+    ApiResponse({ status: 200, description: 'Transfer completed' }),
+    __param(0, Request()),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, ConfirmTransferDto]),
+    __metadata("design:returntype", Promise)
+], WalletController.prototype, "confirmTransfer", null);
+__decorate([
+    Post('debug/inject-balance'),
+    ApiOperation({ summary: 'TEMPORARY: Inject balance for testing' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], WalletController.prototype, "injectBalance", null);
 WalletController = __decorate([
     ApiTags('Wallet'),
     Controller('wallet'),
-    UseGuards(JwtAuthGuard),
-    ApiBearerAuth(),
-    __metadata("design:paramtypes", [WalletService])
+    ApiBearerAuth('JWT-auth'),
+    __metadata("design:paramtypes", [WalletService,
+        FXService,
+        TransferService,
+        PrismaService])
 ], WalletController);
 export { WalletController };

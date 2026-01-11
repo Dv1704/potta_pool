@@ -1,8 +1,6 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
-
-
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
 }
 
 datasource db {
@@ -25,14 +23,17 @@ model User {
   updatedAt        DateTime @updatedAt
   resetToken       String?
   resetTokenExpiry DateTime?
+  emailVerified    Boolean  @default(false)
+  phoneNumber      String?
+  isTwoFactorEnabled Boolean @default(false)
 }
 
 model Wallet {
   id               String   @id @default(uuid())
   userId           String   @unique
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  availableBalance Float    @default(0.0)
-  lockedBalance    Float    @default(0.0)
+  availableBalance Decimal  @default(0.0000) @db.Decimal(18, 4)
+  lockedBalance    Decimal  @default(0.0000) @db.Decimal(18, 4)
   currency         String   @default("GHS")
   version          Int      @default(0) // Optimistic locking
   ledgers          Ledger[]
@@ -45,14 +46,14 @@ model Ledger {
   transactionId    String   @default(uuid()) // Groups related debit/credit entries
   walletId         String
   wallet           Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
-  amount           Float    // Positive for credit, negative for debit
+  amount           Decimal  @db.Decimal(18, 4)    // Positive for credit, negative for debit
   description      String?
   type             String   // DEPOSIT, WITHDRAWAL, LOCK, PAYOUT, COMMISSION, ROLLBACK
   referenceId      String?  // external ref (matchId, stripeId, etc.)
   currency         String   @default("GHS")
-  originalAmount   Float?   // Before FX conversion
+  originalAmount   Decimal? @db.Decimal(18, 4)   // Before FX conversion
   originalCurrency String?
-  fxRate           Float?
+  fxRate           Decimal? @db.Decimal(18, 4)
   createdAt        DateTime @default(now())
 }
 
@@ -64,3 +65,26 @@ model ProcessedWebhook {
   createdAt         DateTime @default(now())
 }
 
+
+model Game {
+  id         String    @id @default(uuid())
+  mode       String    // 'speed' | 'turn'
+  stake      Decimal   @db.Decimal(18, 4)
+  status     String    // ACTIVE, COMPLETED, CANCELLED_BY_CRASH, CANCELLED_BY_TIMEOUT, CANCELLED_BY_ERROR
+  players    String[]  // Storing IDs as array for simplicity in this phase
+  winnerId   String?
+  crashPoint Decimal?  @db.Decimal(18, 4) // For Aviator games - the predetermined crash multiplier
+  expiresAt  DateTime? // When the game should auto-complete (60s for Aviator)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  version    Int       @default(0)
+}
+
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  adminId      String   // User ID of the admin
+  action       String   // BAN, APPROVE_WITHDRAWAL, OVERRIDE_BALANCE
+  targetUserId String?
+  details      String?  // JSON string or description
+  createdAt    DateTime @default(now())
+}

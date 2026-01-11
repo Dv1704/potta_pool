@@ -9,6 +9,9 @@ export class InitiateDepositDto {
 
     @ApiProperty({ example: 'test@example.com' })
     email!: string;
+
+    @ApiProperty({ example: 'http://localhost:5173/games', required: false })
+    callbackUrl?: string;
 }
 
 export class InitiateWithdrawalDto {

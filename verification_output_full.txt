@@ -1,0 +1,50 @@
+--- Starting Comprehensive API Verification ---
+Time: 2026-01-07T11:47:13.025Z
+
+[STEP 1] Registering User: verify_wcycvj@example.com
+Status: 201
+
+[STEP 2] Logging in
+Login successful.
+Token received (first 20 chars): eyJhbGciOiJIUzI1NiIs...
+
+[INFO] Using Headers: {
+  "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InZlcmlmeV93Y3ljdmpAZXhhbXBsZS5jb20iLCJzdWIiOiJhYjRiMDFhNi02OGFkLTRiYTEtOTRiYy1hMTk5YzUxNGE5NTQiLCJyb2xlIjoiVVNFUiIsImlhdCI6MTc2Nzc4NjQzNCwiZXhwIjoxNzY3NzkwMDM0fQ.bIpSam1CjjFPjhBYDHjCNSi9NdUmDMfPzEXYF6k4mDM",
+  "Content-Type": "application/json"
+}
+
+[STEP 3] Testing GET /wallet/balance
+Status: 200
+Response: { available: 0, locked: 0, currency: 'GHS' }
+✅ AUTHORIZED - Wallet balance retrieved successfully
+
+[STEP 4] Testing GET /auth/profile
+Status: 200
+Response: {
+  id: 'ab4b01a6-68ad-4ba1-94bc-a199c514a954',
+  email: 'verify_wcycvj@example.com',
+  name: 'Verification User',
+  password: '$2b$10$r55yj1tmNRKUXLFilY09geInv6WhOyHTm2Ykt2.h5cyp02HkuzJvu',
+  referralCode: '21RR1X',
+  referredById: null,
+  isBanned: false,
+  role: 'USER',
+  createdAt: '2026-01-07T11:47:13.523Z',
+  updatedAt: '2026-01-07T11:47:13.523Z',
+  resetToken: null,
+  resetTokenExpiry: null,
+  referrals: []
+}
+
+[STEP 5] Testing GET /game/stats
+Status: 200
+Response: {
+  wins: 0,
+  losses: 0,
+  totalGames: 0,
+  winRate: 0,
+  streak: 0,
+  totalEarnings: 0
+}
+
+--- Verification Complete ---

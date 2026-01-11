@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  name               String?
+  password           String // Hashed password
+  referralCode       String    @unique
+  referredById       String?
+  referredBy         User?     @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals          User[]    @relation("UserReferrals")
+  isBanned           Boolean   @default(false)
+  wallet             Wallet?
+  role               String    @default("USER")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  emailVerified      Boolean   @default(false)
+  phoneNumber        String?
+  isTwoFactorEnabled Boolean   @default(false)
+}
+
+model Wallet {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availableBalance Decimal  @default(0.0000) @db.Decimal(18, 4)
+  lockedBalance    Decimal  @default(0.0000) @db.Decimal(18, 4)
+  currency         String   @default("GHS")
+  version          Int      @default(0) // Optimistic locking
+  ledgers          Ledger[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Ledger {
+  id               String   @id @default(uuid())
+  transactionId    String   @default(uuid()) // Groups related debit/credit entries
+  walletId         String
+  wallet           Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  amount           Decimal  @db.Decimal(18, 4) // Positive for credit, negative for debit
+  description      String?
+  type             String // DEPOSIT, WITHDRAWAL, LOCK, PAYOUT, COMMISSION, ROLLBACK
+  referenceId      String? // external ref (matchId, stripeId, etc.)
+  currency         String   @default("GHS")
+  originalAmount   Decimal? @db.Decimal(18, 4) // Before FX conversion
+  originalCurrency String?
+  fxRate           Decimal? @db.Decimal(18, 4)
+  createdAt        DateTime @default(now())
+}
+
+model ProcessedWebhook {
+  id                String   @id @default(uuid())
+  providerReference String   @unique // Paystack reference
+  provider          String // e.g., "PAYSTACK"
+  status            String // e.g., "SUCCESS"
+  createdAt         DateTime @default(now())
+}
+
+model Game {
+  id         String    @id @default(uuid())
+  mode       String // 'speed' | 'turn'
+  stake      Decimal   @db.Decimal(18, 4)
+  status     String // ACTIVE, COMPLETED, CANCELLED_BY_CRASH, CANCELLED_BY_TIMEOUT, CANCELLED_BY_ERROR
+  players    String[] // Storing IDs as array for simplicity in this phase
+  winnerId   String?
+  crashPoint Decimal?  @db.Decimal(18, 4) // For Aviator games - the predetermined crash multiplier
+  expiresAt  DateTime? // When the game should auto-complete (60s for Aviator)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  version    Int       @default(0)
+}
+
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  adminId      String // User ID of the admin
+  action       String // BAN, APPROVE_WITHDRAWAL, OVERRIDE_BALANCE
+  targetUserId String?
+  details      String? // JSON string or description
+  createdAt    DateTime @default(now())
+}

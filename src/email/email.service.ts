@@ -48,4 +48,19 @@ export class EmailService {
             throw error;
         }
     }
+
+    async sendEmail(to: string, subject: string, html: string) {
+        try {
+            const data = await this.resend.emails.send({
+                from: 'Potta <onboarding@resend.dev>',
+                to: [to],
+                subject,
+                html,
+            });
+            return data;
+        } catch (error) {
+            console.error('Error sending email:', error);
+            throw error;
+        }
+    }
 }

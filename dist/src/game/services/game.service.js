@@ -7,20 +7,87 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 import { Injectable } from '@nestjs/common';
-import { SpeedMode } from '../modes/SpeedMode';
-import { TurnMode } from '../modes/TurnMode';
-import { WalletService } from '../../wallet/wallet.service';
-import { PrismaService } from '../../prisma/prisma.service';
+import { SpeedMode } from '../modes/SpeedMode.js';
+import { TurnMode } from '../modes/TurnMode.js';
+import { WalletService } from '../../wallet/wallet.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { Redis } from 'ioredis';
+import { Inject } from '@nestjs/common';
 let GameService = class GameService {
     walletService;
     prisma;
-    activeGames = new Map();
-    constructor(walletService, prisma) {
+    redis;
+    constructor(walletService, prisma, redis) {
         this.walletService = walletService;
         this.prisma = prisma;
+        this.redis = redis;
+    }
+    async onModuleInit() {
+        await this.recoverCrashedGames();
+    }
+    async recoverCrashedGames() {
+        // Find games that are stuck in ACTIVE state but server restarted (memory empty)
+        // We assume all ACTIVE games in DB are from a previous crash since we just started.
+        const crashedGames = await this.prisma.game.findMany({
+            where: { status: 'ACTIVE' }
+        });
+        console.log(`[CrashRecovery] Found ${crashedGames.length} crashed games to refund.`);
+        for (const game of crashedGames) {
+            console.log(`[CrashRecovery] Refunding Game ${game.id}...`);
+            // Only refund players that actually exist
+            const validPlayers = game.players.filter(p => p && p.trim() !== '');
+            for (const playerId of validPlayers) {
+                try {
+                    await this.walletService.rollbackLock(playerId, Number(game.stake), game.id);
+                    console.log(`[CrashRecovery] Refunded ${game.stake} GHS to player ${playerId}`);
+                }
+                catch (error) {
+                    console.error(`[CrashRecovery] Failed to refund player ${playerId}:`, error.message);
+                    // Continue with other players even if one fails
+                }
+            }
+            await this.prisma.game.update({
+                where: { id: game.id },
+                data: { status: 'CANCELLED_BY_CRASH' }
+            });
+            console.log(`[CrashRecovery] Game ${game.id} refunded and cancelled.`);
+        }
+    }
+    getGameKey(gameId) {
+        return `game:active:${gameId}`;
+    }
+    async saveGame(gameId, game) {
+        const state = {
+            modeType: (game.mode instanceof SpeedMode) ? 'speed' : 'turn',
+            stake: game.stake,
+            players: game.players,
+            data: game.mode.serialize()
+        };
+        await this.redis.set(this.getGameKey(gameId), JSON.stringify(state), 'EX', 3600); // 1 hour expiry
+    }
+    async loadGame(gameId) {
+        const data = await this.redis.get(this.getGameKey(gameId));
+        if (!data)
+            return null;
+        const state = JSON.parse(data);
+        let mode;
+        if (state.modeType === 'speed') {
+            mode = new SpeedMode(state.players);
+        }
+        else {
+            mode = new TurnMode(state.players);
+        }
+        mode.hydrate(state.data);
+        return { mode, stake: state.stake, players: state.players };
     }
     async createGame(gameId, players, mode, stake) {
+        await this.prisma.game.create({
+            data: { id: gameId, mode, stake, players, status: 'ACTIVE' }
+        });
         let gameMode;
         if (mode === 'speed') {
             gameMode = new SpeedMode(players);
@@ -28,43 +95,67 @@ let GameService = class GameService {
         else {
             gameMode = new TurnMode(players);
         }
-        // Lock funds for both players atomically
         await this.walletService.lockFundsForMatch(players, stake, gameId);
-        this.activeGames.set(gameId, { mode: gameMode, stake, players });
+        await this.saveGame(gameId, { mode: gameMode, stake, players });
     }
-    getGame(gameId) {
-        return this.activeGames.get(gameId);
+    async getGame(gameId) {
+        return this.loadGame(gameId);
     }
     async handleShot(gameId, playerId, angle, power, sideSpin, backSpin) {
-        const game = this.activeGames.get(gameId);
+        const game = await this.loadGame(gameId);
         if (!game)
             throw new Error('Game not found');
         const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin);
         if (game.mode.isFinished()) {
             await this.endGame(gameId);
         }
+        else {
+            await this.saveGame(gameId, game);
+        }
         return result;
     }
     async endGame(gameId) {
-        const game = this.activeGames.get(gameId);
+        const game = await this.loadGame(gameId);
         if (!game)
             return;
         const winnerId = game.mode.getWinner();
+        // 1. ATOMIC STATUS CHANGE (Locking the win on DB level)
+        const updateResult = await this.prisma.game.updateMany({
+            where: { id: gameId, status: 'ACTIVE' },
+            data: { status: 'COMPLETED', winnerId: winnerId || null }
+        });
+        if (updateResult.count === 0) {
+            // Another server node already ended this game
+            await this.redis.del(this.getGameKey(gameId));
+            return;
+        }
         if (winnerId) {
             const totalPot = game.stake * 2;
             const loserIds = game.players.filter(id => id !== winnerId);
             await this.walletService.processPayout(gameId, winnerId, loserIds, totalPot);
-            console.log(`Game ${gameId} ended. Winner: ${winnerId}, Total Pot: ${totalPot}`);
         }
-        this.activeGames.delete(gameId);
+        await this.redis.del(this.getGameKey(gameId));
     }
     async checkAllTimeouts() {
+        // Distributed Lock to prevent multiple nodes from scanning Redis at same time
+        const lockKey = 'game:checkTimeouts:lock';
+        const lock = await this.redis.set(lockKey, '1', 'EX', 5, 'NX');
+        if (!lock)
+            return [];
         const timedOutGames = [];
-        for (const [gameId, game] of this.activeGames.entries()) {
-            game.mode.updateStatus();
-            if (game.mode.isFinished()) {
-                await this.endGame(gameId);
-                timedOutGames.push(gameId);
+        const keys = await this.redis.keys('game:active:*');
+        for (const key of keys) {
+            const gameId = key.replace('game:active:', '');
+            const game = await this.loadGame(gameId);
+            if (game) {
+                game.mode.updateStatus();
+                if (game.mode.isFinished()) {
+                    await this.endGame(gameId);
+                    timedOutGames.push(gameId);
+                }
+                else {
+                    await this.saveGame(gameId, game);
+                }
             }
         }
         return timedOutGames;
@@ -74,13 +165,15 @@ let GameService = class GameService {
             await this.walletService.rollbackLock(userId, stake, matchId);
         }
     }
-    removeGame(gameId) {
-        this.activeGames.delete(gameId);
+    async removeGame(gameId) {
+        await this.redis.del(this.getGameKey(gameId));
     }
 };
 GameService = __decorate([
     Injectable(),
+    __param(2, Inject('REDIS_CLIENT')),
     __metadata("design:paramtypes", [WalletService,
-        PrismaService])
+        PrismaService,
+        Redis])
 ], GameService);
 export { GameService };

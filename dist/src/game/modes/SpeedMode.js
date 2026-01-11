@@ -1,5 +1,5 @@
-import { GameMode } from './GameMode';
-import * as Constants from '../engine/Constants';
+import { GameMode } from './GameMode.js';
+import * as Constants from '../engine/Constants.js';
 export class SpeedMode extends GameMode {
     turnExpiration = 0;
     TIMEOUT_MS = 60000;
@@ -21,9 +21,6 @@ export class SpeedMode extends GameMode {
             throw new Error('Turn timed out');
         }
         const result = this.engine.executeShot(angle, power, sideSpin, backSpin);
-        // In Speed mode, we just alternate turns if no special rule applies?
-        // Usually speed mode is "clear all balls as fast as possible" or just fast-paced PvP.
-        // The requirement says "60-second timer per player (server-enforced)".
         this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
         this.resetTimer();
         this.updateStatus();
@@ -34,17 +31,14 @@ export class SpeedMode extends GameMode {
         this.winner = this.players[(this.currentTurnIndex + 1) % 2];
     }
     updateStatus() {
-        // Check if timeout has occurred if no shot was taken
         if (!this.isGameOver && Date.now() > this.turnExpiration) {
             this.handleTimeout();
         }
-        // Check if all balls (except cue) are cleared
         const balls = this.engine.getBalls();
         const remainingBalls = balls.filter(b => b.getNumber() !== 0 && b.isBallOnTable()).length;
         if (remainingBalls === 0) {
             this.isGameOver = true;
-            this.winner = this.players[this.currentTurnIndex]; // Last player to pot wins? Or based on points?
-            // For now, let's say last player to pot wins if all cleared.
+            this.winner = this.players[this.currentTurnIndex];
         }
     }
     getGameState() {
@@ -64,5 +58,28 @@ export class SpeedMode extends GameMode {
             winner: this.winner,
             timer: Math.max(0, Math.floor((this.turnExpiration - Date.now()) / 1000))
         };
+    }
+    serialize() {
+        return {
+            turnIndex: this.currentTurnIndex,
+            turnExpiration: this.turnExpiration,
+            isGameOver: this.isGameOver,
+            winner: this.winner,
+            balls: this.getGameState().balls
+        };
+    }
+    hydrate(state) {
+        this.currentTurnIndex = state.turnIndex;
+        this.turnExpiration = state.turnExpiration;
+        this.isGameOver = state.isGameOver;
+        this.winner = state.winner;
+        const balls = this.getBalls();
+        for (const ball of balls) {
+            const bState = state.balls[ball.getNumber()];
+            if (bState) {
+                ball.setPos(bState.x, bState.y);
+                ball.setFlagOnTable(bState.onTable);
+            }
+        }
     }
 }

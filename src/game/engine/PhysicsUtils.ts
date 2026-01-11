@@ -1,5 +1,5 @@
-import { Vector2 } from './Vector2';
-import { Edge } from './Edge';
+import { Vector2 } from './Vector2.js';
+import { Edge } from './Edge.js';
 
 export function dotProductV2(v1: Vector2, v2: Vector2): number {
     return v1.getX() * v2.getX() + v1.getY() * v2.getY();

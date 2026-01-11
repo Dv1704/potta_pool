@@ -24,6 +24,7 @@ export class RegisterDto {
     email;
     password;
     name;
+    referralCode;
 }
 __decorate([
     ApiProperty({ example: 'user@example.com' }),
@@ -37,6 +38,10 @@ __decorate([
     ApiProperty({ example: 'John Doe', required: false }),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "name", void 0);
+__decorate([
+    ApiProperty({ example: 'REF123', required: false }),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "referralCode", void 0);
 export class ForgotPasswordDto {
     email;
 }

@@ -1,5 +1,5 @@
-import { Vector2 } from './Vector2';
-import { BALL_RADIUS } from './Constants';
+import { Vector2 } from './Vector2.js';
+import { BALL_RADIUS } from './Constants.js';
 
 export class Ball {
     private _bOnTable: boolean = false;

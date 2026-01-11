@@ -1,7 +1,7 @@
-import { Vector2 } from './Vector2';
-import { Edge } from './Edge';
-import * as Constants from './Constants';
-import * as PhysicsUtils from './PhysicsUtils';
+import { Vector2 } from './Vector2.js';
+import { Edge } from './Edge.js';
+import * as Constants from './Constants.js';
+import * as PhysicsUtils from './PhysicsUtils.js';
 export class PhysicsController {
     _bAllBallsStopped = true;
     _aBalls = [];

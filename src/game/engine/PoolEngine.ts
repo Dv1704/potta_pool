@@ -1,7 +1,7 @@
-import { Ball } from './Ball';
-import { PhysicsController } from './PhysicsController';
-import { Vector2 } from './Vector2';
-import * as Constants from './Constants';
+import { Ball } from './Ball.js';
+import { PhysicsController } from './PhysicsController.js';
+import { Vector2 } from './Vector2.js';
+import * as Constants from './Constants.js';
 
 export interface ShotResult {
     pocketedBalls: number[];

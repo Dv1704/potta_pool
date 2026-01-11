@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Request, Headers, HttpCode } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request, Headers, HttpCode, Get, Param } from '@nestjs/common';
 import { PaymentService } from './payment.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
@@ -12,11 +12,19 @@ export class PaymentController {
     constructor(private paymentService: PaymentService) { }
 
     @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @Post('deposit/initialize')
     @ApiOperation({ summary: 'Initialize a Paystack deposit' })
     async initializeDeposit(@Request() req: any, @Body() dto: InitiateDepositDto) {
-        return this.paymentService.initializeDeposit(req.user.id, dto.email, dto.amount, dto.currency);
+        return this.paymentService.initializeDeposit(req.user.id, dto.email, dto.amount, dto.currency, dto.callbackUrl);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @Get('verify/:reference')
+    @ApiOperation({ summary: 'Verify a Paystack transaction manually' })
+    async verifyTransaction(@Request() req: any, @Param('reference') reference: string) {
+        return this.paymentService.verifyTransaction(reference, req.user.id);
     }
 
     /**
@@ -33,7 +41,7 @@ export class PaymentController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @Post('withdraw')
     @ApiOperation({ summary: 'Request a withdrawal' })
     async withdraw(@Request() req: any, @Body() dto: InitiateWithdrawalDto) {
@@ -47,7 +55,7 @@ export class PaymentController {
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles('ADMIN')
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @Post('admin/withdraw')
     @ApiOperation({ summary: 'Admin withdrawal to company account' })
     async adminWithdraw(@Body() dto: AdminWithdrawalDto) {

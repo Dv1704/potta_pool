@@ -1,4 +1,4 @@
-import { Vector2 } from './Vector2';
+import { Vector2 } from './Vector2.js';
 export function dotProductV2(v1, v2) {
     return v1.getX() * v2.getX() + v1.getY() * v2.getY();
 }

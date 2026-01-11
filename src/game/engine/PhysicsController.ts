@@ -1,8 +1,8 @@
-import { Vector2 } from './Vector2';
-import { Edge } from './Edge';
-import { Ball } from './Ball';
-import * as Constants from './Constants';
-import * as PhysicsUtils from './PhysicsUtils';
+import { Vector2 } from './Vector2.js';
+import { Edge } from './Edge.js';
+import { Ball } from './Ball.js';
+import * as Constants from './Constants.js';
+import * as PhysicsUtils from './PhysicsUtils.js';
 
 export class PhysicsController {
     private _bAllBallsStopped: boolean = true;

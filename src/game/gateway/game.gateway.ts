@@ -8,18 +8,23 @@ import {
     ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { MatchmakingService } from '../matchmaking/matchmaking.service';
-import { GameService } from '../services/game.service';
+import { MatchmakingService } from '../matchmaking/matchmaking.service.js';
+import { GameService } from '../services/game.service.js';
 import { v4 as uuidv4 } from 'uuid';
+import { WalletService } from '../../wallet/wallet.service.js';
+import { BadRequestException } from '@nestjs/common';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server!: Server;
 
+    private lastShotTime: Map<string, number> = new Map();
+
     constructor(
         private matchmakingService: MatchmakingService,
         private gameService: GameService,
+        private walletService: WalletService,
     ) {
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
@@ -49,6 +54,13 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { userId: string; stake: number; mode: 'speed' | 'turn' },
     ) {
+        // 1. Insufficient Funds Guard
+        const balance = await this.walletService.getBalance(data.userId);
+        if (balance.available < data.stake) {
+            client.emit('error', { message: 'Insufficient funds for this stake' });
+            return;
+        }
+
         const match = await this.matchmakingService.addToQueue({
             userId: data.userId,
             socketId: client.id,
@@ -62,6 +74,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             try {
                 await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
+                const game = await this.gameService.getGame(gameId);
 
                 match.forEach((p: any) => {
                     this.server.to(p.socketId).emit('matchFound', {
@@ -69,7 +82,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                         opponentId: playerIds.find((id: string) => id !== p.userId),
                         mode: data.mode,
                         stake: data.stake,
-                        gameState: this.gameService.getGame(gameId)?.mode.getGameState()
+                        gameState: game?.mode.getGameState()
                     });
                 });
             } catch (error: any) {
@@ -87,6 +100,15 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { gameId: string; userId: string; angle: number; power: number; sideSpin: number; backSpin: number },
     ) {
+        // 2. Input Throttling
+        const lastShot = this.lastShotTime.get(data.userId) || 0;
+        const now = Date.now();
+        if (now - lastShot < 1000) { // 1 second throttle
+            // client.emit('error', { message: 'Shooting too fast' }); // Optional: don't spam error
+            return;
+        }
+        this.lastShotTime.set(data.userId, now);
+
         try {
             const result = await this.gameService.handleShot(
                 data.gameId,
@@ -97,7 +119,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 data.backSpin || 0
             );
 
-            const game = this.gameService.getGame(data.gameId);
+            const game = await this.gameService.getGame(data.gameId);
             if (game) {
                 this.server.to(data.gameId).emit('shotResult', {
                     shotResult: result,
@@ -115,17 +137,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     @SubscribeMessage('getGameState')
-    handleGetGameState(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
-        const game = this.gameService.getGame(data.gameId);
+    async handleGetGameState(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
+        const game = await this.gameService.getGame(data.gameId);
         if (game) {
             const state = game.mode.getGameState();
             client.emit('gameState', state);
-
-            if (state.isGameOver) {
-                // Trigger any cleanup or payout logic if it ended due to timeout
-                // Actually handleShot usually does this, but for timeout we might need special handling
-                // For now, getGameState triggers the status update.
-            }
         }
     }
 }

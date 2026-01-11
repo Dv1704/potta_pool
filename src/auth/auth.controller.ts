@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
@@ -24,9 +24,18 @@ export class AuthController {
     async login(@Body() loginDto: LoginDto) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
-            return { error: 'Invalid credentials' }; // Or throw Unauthorized
+            throw new UnauthorizedException('Invalid credentials');
         }
         return this.authService.login(user);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @Post('logout')
+    @ApiOperation({ summary: 'Logout user (Client-side token removal)' })
+    @ApiResponse({ status: 200, description: 'User logged out successfully' })
+    async logout(@Request() req: any) {
+        return { message: 'Logged out successfully' };
     }
 
     @Post('forgot-password')
@@ -49,7 +58,7 @@ export class AuthController {
     }
 
     @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth()
+    @ApiBearerAuth('JWT-auth')
     @Get('profile')
     @ApiOperation({ summary: 'Get current user profile' })
     @ApiResponse({ status: 200, description: 'Returns user profile' })

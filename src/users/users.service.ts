@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { User, Prisma } from '../../generated/prisma/client.js';
+import { User, Prisma } from '../generated/client/client.js';
 
 @Injectable()
 export class UsersService {
@@ -42,10 +42,26 @@ export class UsersService {
         });
     }
 
+
+
     async setBanStatus(userId: string, isBanned: boolean): Promise<User> {
         return this.update({
             where: { id: userId },
             data: { isBanned },
+        });
+    }
+
+    async toggleEmailVerification(userId: string, status: boolean): Promise<User> {
+        return this.update({
+            where: { id: userId },
+            data: { emailVerified: status },
+        });
+    }
+
+    async toggleTwoFactor(userId: string, status: boolean): Promise<User> {
+        return this.update({
+            where: { id: userId },
+            data: { isTwoFactorEnabled: status },
         });
     }
 }

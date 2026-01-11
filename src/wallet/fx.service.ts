@@ -55,4 +55,9 @@ export class FXService {
     getSupportedCurrencies(): string[] {
         return Object.keys(this.rates);
     }
+
+    async getLiveRates(): Promise<Record<string, number>> {
+        await this.ensureFreshRates();
+        return { ...this.rates };
+    }
 }

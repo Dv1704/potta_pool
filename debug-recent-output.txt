@@ -1,0 +1,75 @@
+Checking user: victorolanikanju@gmail.com
+Balance: 450
+Wallet ID: 0a0ef964-d5c9-4c85-bf78-93a3ecfd996c
+Recent Transactions: [
+  {
+    "id": "4e2693b0-2722-4404-9ad3-6c72c046e46d",
+    "transactionId": "72b6932f-651d-4895-bf81-5d9a861c2de9",
+    "walletId": "0a0ef964-d5c9-4c85-bf78-93a3ecfd996c",
+    "amount": "200",
+    "description": "Deposit: User received 200 GHS from 200 GHS ",
+    "type": "DEPOSIT",
+    "referenceId": null,
+    "currency": "GHS",
+    "originalAmount": "200",
+    "originalCurrency": "GHS",
+    "fxRate": "1",
+    "createdAt": "2026-01-10T20:23:39.343Z"
+  },
+  {
+    "id": "0d722bdb-9862-4a2a-8c43-9d18afffb023",
+    "transactionId": "fd4f4328-1d57-4fbe-a7ca-884597b71c0a",
+    "walletId": "0a0ef964-d5c9-4c85-bf78-93a3ecfd996c",
+    "amount": "30",
+    "description": "Deposit: User received 30 GHS from 30 GHS ",
+    "type": "DEPOSIT",
+    "referenceId": null,
+    "currency": "GHS",
+    "originalAmount": "30",
+    "originalCurrency": "GHS",
+    "fxRate": "1",
+    "createdAt": "2026-01-10T19:35:24.649Z"
+  },
+  {
+    "id": "956f1caa-f227-43f2-9384-84851bd87328",
+    "transactionId": "a78e0c41-704c-4347-bc7a-adb6408ad7fa",
+    "walletId": "0a0ef964-d5c9-4c85-bf78-93a3ecfd996c",
+    "amount": "70",
+    "description": "Deposit: User received 70 GHS from 70 GHS ",
+    "type": "DEPOSIT",
+    "referenceId": null,
+    "currency": "GHS",
+    "originalAmount": "70",
+    "originalCurrency": "GHS",
+    "fxRate": "1",
+    "createdAt": "2026-01-10T18:36:45.131Z"
+  },
+  {
+    "id": "f982e0d9-72c3-4f4a-b4cd-7b34496c1684",
+    "transactionId": "58ad6bf8-fbd2-4861-9f06-f423353415fb",
+    "walletId": "0a0ef964-d5c9-4c85-bf78-93a3ecfd996c",
+    "amount": "50",
+    "description": "Deposit: User received 50 GHS from 50 GHS ",
+    "type": "DEPOSIT",
+    "referenceId": null,
+    "currency": "GHS",
+    "originalAmount": "50",
+    "originalCurrency": "GHS",
+    "fxRate": "1",
+    "createdAt": "2026-01-10T18:34:03.860Z"
+  },
+  {
+    "id": "2e1ee229-a87e-4998-b53a-340eeb8e3ea5",
+    "transactionId": "0c99367c-0f10-4c11-b16d-a1f751cc436a",
+    "walletId": "0a0ef964-d5c9-4c85-bf78-93a3ecfd996c",
+    "amount": "50",
+    "description": "Deposit: User received 50 GHS from 50 GHS ",
+    "type": "DEPOSIT",
+    "referenceId": null,
+    "currency": "GHS",
+    "originalAmount": "50",
+    "originalCurrency": "GHS",
+    "fxRate": "1",
+    "createdAt": "2026-01-10T18:06:32.672Z"
+  }
+]

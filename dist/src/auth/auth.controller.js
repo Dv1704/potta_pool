@@ -10,7 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Post, Body, UseGuards, Get, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Request, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
 import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
@@ -26,9 +26,12 @@ let AuthController = class AuthController {
     async login(loginDto) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
-            return { error: 'Invalid credentials' }; // Or throw Unauthorized
+            throw new UnauthorizedException('Invalid credentials');
         }
         return this.authService.login(user);
+    }
+    async logout(req) {
+        return { message: 'Logged out successfully' };
     }
     async forgotPassword(forgotPasswordDto) {
         return this.authService.forgotPassword(forgotPasswordDto.email);
@@ -61,6 +64,17 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
+    Post('logout'),
+    ApiOperation({ summary: 'Logout user (Client-side token removal)' }),
+    ApiResponse({ status: 200, description: 'User logged out successfully' }),
+    __param(0, Request()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "logout", null);
+__decorate([
     Post('forgot-password'),
     ApiOperation({ summary: 'Request password reset token' }),
     ApiResponse({ status: 200, description: 'Reset instructions sent' }),
@@ -81,7 +95,7 @@ __decorate([
 ], AuthController.prototype, "resetPassword", null);
 __decorate([
     UseGuards(JwtAuthGuard),
-    ApiBearerAuth(),
+    ApiBearerAuth('JWT-auth'),
     Get('profile'),
     ApiOperation({ summary: 'Get current user profile' }),
     ApiResponse({ status: 200, description: 'Returns user profile' }),

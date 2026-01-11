@@ -43,11 +43,30 @@ let AuthService = class AuthService {
         if (existingUser) {
             throw new ConflictException('Email already exists');
         }
+        let referredById;
+        if (registerDto.referralCode) {
+            const referrer = await this.usersService.findByReferralCode(registerDto.referralCode);
+            if (referrer) {
+                referredById = referrer.id;
+            }
+        }
+        // Generate unique referral code for the new user
+        let newReferralCode;
+        let codeExists = true;
+        do {
+            newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existingCode = await this.usersService.findByReferralCode(newReferralCode);
+            if (!existingCode) {
+                codeExists = false;
+            }
+        } while (codeExists);
         const hashedPassword = await bcrypt.hash(registerDto.password, 10);
         const user = await this.usersService.create({
             email: registerDto.email,
             password: hashedPassword,
             name: registerDto.name,
+            referralCode: newReferralCode,
+            referredBy: referredById ? { connect: { id: referredById } } : undefined,
             role: 'USER', // Default role
             wallet: { create: {} }, // Initialize wallet
         });

@@ -27,6 +27,12 @@ let UsersService = class UsersService {
     async findById(id) {
         return this.prisma.user.findUnique({
             where: { id },
+            include: { referrals: true }
+        });
+    }
+    async findByReferralCode(referralCode) {
+        return this.prisma.user.findUnique({
+            where: { referralCode },
         });
     }
     async update(params) {
@@ -40,6 +46,18 @@ let UsersService = class UsersService {
         return this.update({
             where: { id: userId },
             data: { isBanned },
+        });
+    }
+    async toggleEmailVerification(userId, status) {
+        return this.update({
+            where: { id: userId },
+            data: { emailVerified: status },
+        });
+    }
+    async toggleTwoFactor(userId, status) {
+        return this.update({
+            where: { id: userId },
+            data: { isTwoFactorEnabled: status },
         });
     }
 };
