@@ -136,6 +136,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join(data.gameId);
     }
 
+    @SubscribeMessage('leaveQueue')
+    async handleLeaveQueue(@MessageBody() data: { userId: string }) {
+        await this.matchmakingService.removeFromQueue(data.userId);
+    }
+
     @SubscribeMessage('getGameState')
     async handleGetGameState(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
         const game = await this.gameService.getGame(data.gameId);
