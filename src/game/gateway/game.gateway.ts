@@ -56,52 +56,66 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { userId: string; stake: number; mode: 'speed' | 'turn' },
     ) {
-        // 1. Insufficient Funds Guard
-        const balance = await this.walletService.getBalance(data.userId);
-        if (balance.available < data.stake) {
-            client.emit('error', { message: 'Insufficient funds for this stake' });
-            return;
-        }
+        console.log(`[JoinQueue] Request from ${data.userId} (Socket: ${client.id}) for stake ${data.stake}`);
 
-        const match = await this.matchmakingService.addToQueue({
-            userId: data.userId,
-            socketId: client.id,
-            stake: data.stake,
-            mode: data.mode,
-        });
+        try {
+            // 1. Insufficient Funds Guard
+            const balance = await this.walletService.getBalance(data.userId);
+            console.log(`[JoinQueue] User ${data.userId} balance: ${balance.available}`);
 
-        if (match) {
-            const gameId = uuidv4();
-            const playerIds = match.map((p: any) => p.userId);
+            if (balance.available < data.stake) {
+                console.warn(`[JoinQueue] Insufficient funds for ${data.userId}: ${balance.available} < ${data.stake}`);
+                client.emit('error', { message: 'Insufficient funds for this stake' });
+                return;
+            }
 
-            try {
-                await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
-                const game = await this.gameService.getGame(gameId);
+            const match = await this.matchmakingService.addToQueue({
+                userId: data.userId,
+                socketId: client.id,
+                stake: data.stake,
+                mode: data.mode,
+            });
 
-                // Fetch opponent names from database
-                for (const p of match) {
-                    const opponentId = playerIds.find((id: string) => id !== p.userId);
-                    const opponent = await this.prisma.user.findUnique({
-                        where: { id: opponentId },
-                        select: { name: true, email: true }
-                    });
+            if (match) {
+                console.log(`[JoinQueue] Match found for ${data.userId}! Creating game...`);
+                const gameId = uuidv4();
+                const playerIds = match.map((p: any) => p.userId);
 
-                    this.server.to(p.socketId).emit('matchFound', {
-                        gameId,
-                        opponentId,
-                        opponentName: opponent?.name || opponent?.email?.split('@')[0] || 'Player',
-                        mode: data.mode,
-                        stake: data.stake,
-                        gameState: game?.mode.getGameState()
+                try {
+                    await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
+                    const game = await this.gameService.getGame(gameId);
+
+                    // Fetch opponent names from database
+                    for (const p of match) {
+                        const opponentId = playerIds.find((id: string) => id !== p.userId);
+                        const opponent = await this.prisma.user.findUnique({
+                            where: { id: opponentId },
+                            select: { name: true, email: true }
+                        });
+
+                        this.server.to(p.socketId).emit('matchFound', {
+                            gameId,
+                            opponentId,
+                            opponentName: opponent?.name || opponent?.email?.split('@')[0] || 'Player',
+                            mode: data.mode,
+                            stake: data.stake,
+                            gameState: game?.mode.getGameState()
+                        });
+                    }
+                    console.log(`[JoinQueue] Game ${gameId} created successfully.`);
+                } catch (error: any) {
+                    console.error(`[JoinQueue] Failed to create game: ${error.message}`);
+                    match.forEach((p: any) => {
+                        this.server.to(p.socketId).emit('error', { message: 'Failed to create game: ' + error.message });
                     });
                 }
-            } catch (error: any) {
-                match.forEach((p: any) => {
-                    this.server.to(p.socketId).emit('error', { message: 'Failed to create game: ' + error.message });
-                });
+            } else {
+                console.log(`[JoinQueue] No match found immediately. User ${data.userId} added to queue.`);
+                client.emit('waitingInQueue', { message: 'Searching for opponent...' });
             }
-        } else {
-            client.emit('waitingInQueue', { message: 'Searching for opponent...' });
+        } catch (error: any) {
+            console.error(`[JoinQueue] Error handling join queue: ${error.message}`);
+            client.emit('error', { message: error.message || 'An unexpected error occurred' });
         }
     }
 
