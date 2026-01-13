@@ -6,8 +6,6 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 
 @ApiTags('Game')
 @Controller('game')
-@UseGuards(JwtAuthGuard)
-@ApiBearerAuth('JWT-auth')
 export class GameController {
     constructor(
         private readonly gameService: GameService,
@@ -15,6 +13,8 @@ export class GameController {
     ) { }
 
     @Get('stats')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Get player game statistics' })
     @ApiResponse({ status: 200, description: 'Returns win/loss stats' })
     async getStats(@Request() req: any) {
@@ -302,6 +302,8 @@ export class GameController {
         }));
     }
     @Get(':id')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
     @ApiOperation({ summary: 'Get specific game details' })
     @ApiResponse({ status: 200, description: 'Returns game details' })
     async getMatch(@Request() req: any, @Param('id') id: string) {
