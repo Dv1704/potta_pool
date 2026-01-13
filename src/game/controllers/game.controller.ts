@@ -1,6 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
 import { GameService } from '../services/game.service.js';
-import { MiniGameService } from '../services/minigame.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
@@ -12,7 +11,6 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 export class GameController {
     constructor(
         private readonly gameService: GameService,
-        private readonly miniGameService: MiniGameService,
         private readonly prisma: PrismaService
     ) { }
 
@@ -352,68 +350,6 @@ export class GameController {
             result: game.winnerId === userId ? 'WIN' : (game.winnerId ? 'LOSS' : 'DRAW'),
             winnings: payout ? Number(payout.amount) : 0
         };
-    }
-    @Post('play/dice')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Dice Game' })
-    async playDice(@Request() req: any, @Body() body: { stake: number }) {
-        return this.miniGameService.playDice(req.user.id, Number(body.stake));
-    }
-
-    @Post('play/coin')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Coin Toss' })
-    async playCoin(@Request() req: any, @Body() body: { stake: number, choice: 'heads' | 'tails' }) {
-        return this.miniGameService.playCoin(req.user.id, Number(body.stake), body.choice);
-    }
-
-    @Post('play/number')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Number Rush' })
-    async playNumber(@Request() req: any, @Body() body: { stake: number, guess: number }) {
-        return this.miniGameService.playNumber(req.user.id, Number(body.stake), Number(body.guess));
-    }
-
-    @Post('play/wheel')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Lucky Wheel' })
-    async playWheel(@Request() req: any, @Body() body: { stake: number, choice: string }) {
-        return this.miniGameService.playWheel(req.user.id, Number(body.stake), body.choice);
-    }
-
-    @Post('play/card')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Card Flip' })
-    async playCard(@Request() req: any, @Body() body: { stake: number }) {
-        return this.miniGameService.playCard(req.user.id, Number(body.stake));
-    }
-
-    @Post('play/color')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Color Match' })
-    async playColor(@Request() req: any, @Body() body: { stake: number }) {
-        return this.miniGameService.playColor(req.user.id, Number(body.stake));
-    }
-
-    @Post('play/pool')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Play Pool Master' })
-    async playPool(@Request() req: any, @Body() body: { stake: number }) {
-        return this.miniGameService.playPool(req.user.id, Number(body.stake));
-    }
-
-    @Post('aviator/bet')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Place Aviator Bet' })
-    async aviatorBet(@Request() req: any, @Body() body: { stake: number }) {
-        return this.miniGameService.placeAviatorBet(req.user.id, Number(body.stake));
-    }
-
-    @Post('aviator/cashout')
-    @UseGuards(JwtAuthGuard)
-    @ApiOperation({ summary: 'Cashout Aviator' })
-    async aviatorCashout(@Request() req: any, @Body() body: { gameId: string, multiplier: number }) {
-        return this.miniGameService.cashOutAviator(req.user.id, body.gameId, Number(body.multiplier));
     }
 }
 
