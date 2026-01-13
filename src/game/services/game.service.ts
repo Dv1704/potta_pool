@@ -84,20 +84,33 @@ export class GameService implements OnModuleInit {
     }
 
     async createGame(gameId: string, players: string[], mode: 'speed' | 'turn', stake: number) {
-        await this.prisma.game.create({
-            data: { id: gameId, mode, stake, players, status: 'ACTIVE' }
-        });
+        console.log(`[CreateGame] Starting creation for game ${gameId} with players ${players.join(', ')}`);
 
-        let gameMode: GameMode;
-        if (mode === 'speed') {
-            gameMode = new SpeedMode(players);
-        } else {
-            gameMode = new TurnMode(players);
+        try {
+            console.log(`[CreateGame] Creating DB entry...`);
+            await this.prisma.game.create({
+                data: { id: gameId, mode, stake, players, status: 'ACTIVE' }
+            });
+            console.log(`[CreateGame] DB entry created.`);
+
+            let gameMode: GameMode;
+            if (mode === 'speed') {
+                gameMode = new SpeedMode(players);
+            } else {
+                gameMode = new TurnMode(players);
+            }
+
+            console.log(`[CreateGame] Locking funds...`);
+            await this.walletService.lockFundsForMatch(players, stake, gameId);
+            console.log(`[CreateGame] Funds locked.`);
+
+            console.log(`[CreateGame] Saving game state to Redis...`);
+            await this.saveGame(gameId, { mode: gameMode, stake, players });
+            console.log(`[CreateGame] Game saved to Redis. Done.`);
+        } catch (error: any) {
+            console.error(`[CreateGame] Error: ${error.message}`);
+            throw error;
         }
-
-        await this.walletService.lockFundsForMatch(players, stake, gameId);
-
-        await this.saveGame(gameId, { mode: gameMode, stake, players });
     }
 
     async getGame(gameId: string) {
