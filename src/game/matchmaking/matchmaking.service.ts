@@ -13,14 +13,22 @@ export class MatchmakingService {
     constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) { }
 
     private getBracket(stake: number): string {
-        // Define brackets: 1-5, 5-10, 10-15, 15-20, 20-50, 50-100, 100+
-        if (stake < 5) return '1-5';
-        if (stake < 10) return '5-10';
-        if (stake < 15) return '10-15';
-        if (stake < 20) return '15-20';
-        if (stake < 50) return '20-50';
-        if (stake < 100) return '50-100';
+        // Wider brackets for better matching: 10-20, 20-100, 100+
+        if (stake < 10) return '1-10';
+        if (stake < 20) return '10-20';
+        if (stake < 100) return '20-100';
         return '100+';
+    }
+
+    private getAdjacentBrackets(bracket: string): string[] {
+        // Return adjacent brackets for flexible matching
+        const bracketMap: { [key: string]: string[] } = {
+            '1-10': ['10-20'],
+            '10-20': ['1-10', '20-100'],
+            '20-100': ['10-20', '100+'],
+            '100+': ['20-100']
+        };
+        return bracketMap[bracket] || [];
     }
 
     private getQueueKey(mode: string, bracket: string): string {
@@ -37,8 +45,19 @@ export class MatchmakingService {
             return null;
         }
 
-        // Try to find a match
-        const opponentJson = await this.redis.lpop(key);
+        // Try to find a match in primary bracket
+        let opponentJson = await this.redis.lpop(key);
+
+        // If no match in primary bracket, try adjacent brackets
+        if (!opponentJson) {
+            const adjacentBrackets = this.getAdjacentBrackets(bracket);
+            for (const adjBracket of adjacentBrackets) {
+                const adjKey = this.getQueueKey(player.mode, adjBracket);
+                opponentJson = await this.redis.lpop(adjKey);
+                if (opponentJson) break;
+            }
+        }
+
         if (opponentJson) {
             const opponent = JSON.parse(opponentJson);
             return [player, opponent];
