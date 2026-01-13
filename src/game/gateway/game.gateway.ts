@@ -15,7 +15,17 @@ import { WalletService } from '../../wallet/wallet.service.js';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 
-@WebSocketGateway({ cors: { origin: '*' } })
+@WebSocketGateway({
+    cors: {
+        origin: (origin, callback) => {
+            // Allow all origins
+            callback(null, true);
+        },
+        credentials: true,
+        methods: ['GET', 'POST'],
+    },
+    transports: ['websocket', 'polling']
+})
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WebSocketServer()
     server!: Server;
