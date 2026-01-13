@@ -13,6 +13,7 @@ import { GameService } from '../services/game.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WalletService } from '../../wallet/wallet.service.js';
 import { BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service.js';
 
 @WebSocketGateway({ cors: { origin: '*' } })
 export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +26,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private matchmakingService: MatchmakingService,
         private gameService: GameService,
         private walletService: WalletService,
+        private prisma: PrismaService,
     ) {
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
@@ -76,15 +78,23 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
                 const game = await this.gameService.getGame(gameId);
 
-                match.forEach((p: any) => {
+                // Fetch opponent names from database
+                for (const p of match) {
+                    const opponentId = playerIds.find((id: string) => id !== p.userId);
+                    const opponent = await this.prisma.user.findUnique({
+                        where: { id: opponentId },
+                        select: { name: true, email: true }
+                    });
+
                     this.server.to(p.socketId).emit('matchFound', {
                         gameId,
-                        opponentId: playerIds.find((id: string) => id !== p.userId),
+                        opponentId,
+                        opponentName: opponent?.name || opponent?.email?.split('@')[0] || 'Player',
                         mode: data.mode,
                         stake: data.stake,
                         gameState: game?.mode.getGameState()
                     });
-                });
+                }
             } catch (error: any) {
                 match.forEach((p: any) => {
                     this.server.to(p.socketId).emit('error', { message: 'Failed to create game: ' + error.message });
