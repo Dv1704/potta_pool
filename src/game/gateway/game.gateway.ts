@@ -180,7 +180,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const game = await this.gameService.getGame(data.gameId);
         if (game) {
             const state = game.mode.getGameState();
-            client.emit('gameState', state);
+
+            // Enrich state with player names
+            const players = await Promise.all(game.players.map(async (pId) => {
+                const user = await this.prisma.user.findUnique({
+                    where: { id: pId },
+                    select: { id: true, name: true, email: true }
+                });
+                return {
+                    id: pId,
+                    name: user?.name || user?.email?.split('@')[0] || 'Player'
+                };
+            }));
+
+            client.emit('gameState', { ...state, players });
         }
     }
 }
