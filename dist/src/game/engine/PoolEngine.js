@@ -54,12 +54,28 @@ export class PoolEngine {
         cueBall.setSideEffect(sideSpin);
         const pocketedBalls = [];
         let cueBallScratched = false;
+        const animationFrames = [];
         // Simulation loop
         let frames = 0;
         const maxFrames = 6000; // 10 seconds at 60 FPS safety cap
         do {
             this._physics.update(this._balls);
             frames++;
+            // Record Frame (Every 2 frames to save bandwidth, 30fps effective for network)
+            if (frames % 2 === 0) {
+                const frameData = {};
+                let hasMovement = false;
+                for (const ball of this._balls) {
+                    if (ball.isBallOnTable() && (ball.getVelocity().length() > 0.01 || frames === 2)) {
+                        frameData[ball.getNumber()] = { x: ball.getX(), y: ball.getY() };
+                        hasMovement = true;
+                    }
+                }
+                // Only push frames if something is moving (or it's the start)
+                if (hasMovement) {
+                    animationFrames.push(frameData);
+                }
+            }
             // Check for pocketed balls in this frame
             for (const ball of this._balls) {
                 if (ball.getHole() && ball.isBallOnTable()) {
@@ -89,6 +105,7 @@ export class PoolEngine {
             cueBallScratched,
             finalState,
             events: this._physics.getEvents(),
+            animationFrames
         };
     }
     getBalls() {

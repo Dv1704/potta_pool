@@ -49,6 +49,9 @@ export class Ball {
     getCurForce() {
         return this._vCurForce;
     }
+    getVelocity() {
+        return this._vCurForce;
+    }
     setTmpForce(iX, iY) {
         this._vTmpForce.set(iX, iY);
     }

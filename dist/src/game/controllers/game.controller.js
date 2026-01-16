@@ -10,17 +10,41 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
 import { GameService } from '../services/game.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { PoolEngine } from '../engine/PoolEngine.js';
 let GameController = class GameController {
     gameService;
     prisma;
     constructor(gameService, prisma) {
         this.gameService = gameService;
         this.prisma = prisma;
+    }
+    /**
+     * Demo Shot Endpoint - Uses real physics engine for demo page
+     * No authentication required
+     */
+    async demoShot(body) {
+        // Create a temporary engine for this demo shot
+        const engine = new PoolEngine(1);
+        // If custom ball positions provided, set them
+        if (body.balls) {
+            // Reset engine with provided ball positions (for future enhancement)
+        }
+        // Convert angle to radians (frontend sends degrees)
+        const angleRad = (body.angle * Math.PI) / 180;
+        // Execute the shot with real physics
+        const result = engine.executeShot(angleRad, body.power * 5, 0, 0);
+        // Return animation frames and final state
+        return {
+            animationFrames: result.animationFrames,
+            finalBalls: result.finalState,
+            pocketedBalls: result.pocketedBalls,
+            cueBallScratched: result.cueBallScratched
+        };
     }
     async getStats(req) {
         const userId = req.user.id;
@@ -315,6 +339,15 @@ let GameController = class GameController {
         };
     }
 };
+__decorate([
+    Post('demo-shot'),
+    ApiOperation({ summary: 'Execute a demo shot with real physics' }),
+    ApiResponse({ status: 200, description: 'Returns animation frames for ball movement' }),
+    __param(0, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], GameController.prototype, "demoShot", null);
 __decorate([
     Get('stats'),
     UseGuards(JwtAuthGuard),

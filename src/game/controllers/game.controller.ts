@@ -24,7 +24,7 @@ export class GameController {
         @Body() body: { angle: number; power: number; balls: any }
     ) {
         // Create a temporary engine for this demo shot
-        const engine = new PoolEngine();
+        const engine = new PoolEngine(1);
 
         // If custom ball positions provided, set them
         if (body.balls) {
@@ -40,7 +40,7 @@ export class GameController {
         // Return animation frames and final state
         return {
             animationFrames: result.animationFrames,
-            finalBalls: result.finalBalls,
+            finalBalls: result.finalState,
             pocketedBalls: result.pocketedBalls,
             cueBallScratched: result.cueBallScratched
         };
