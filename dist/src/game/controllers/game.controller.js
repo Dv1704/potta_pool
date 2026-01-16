@@ -30,18 +30,39 @@ let GameController = class GameController {
     async demoShot(body) {
         // Create a temporary engine for this demo shot
         const engine = new PoolEngine(1);
-        // If custom ball positions provided, set them
-        if (body.balls) {
-            // Reset engine with provided ball positions (for future enhancement)
-        }
         // Convert angle to radians (frontend sends degrees)
         const angleRad = (body.angle * Math.PI) / 180;
         // Execute the shot with real physics
         const result = engine.executeShot(angleRad, body.power * 5, 0, 0);
-        // Return animation frames and final state
+        // Convert pixels to percentages (engine uses 1920x1080 => frontend uses 0-100%)
+        const CANVAS_WIDTH = 1920;
+        const CANVAS_HEIGHT = 1080;
+        const pixelToPercent = (x, y) => ({
+            x: (x / CANVAS_WIDTH) * 100,
+            y: (y / CANVAS_HEIGHT) * 100
+        });
+        // Convert animation frames to percentages
+        const convertedFrames = result.animationFrames.map(frame => {
+            const converted = {};
+            for (const [ballId, pos] of Object.entries(frame)) {
+                const percent = pixelToPercent(pos.x, pos.y);
+                converted[parseInt(ballId)] = percent;
+            }
+            return converted;
+        });
+        // Convert final state to percentages
+        const convertedFinalBalls = {};
+        for (const [ballId, ball] of Object.entries(result.finalState)) {
+            const percent = pixelToPercent(ball.x, ball.y);
+            convertedFinalBalls[parseInt(ballId)] = {
+                x: percent.x,
+                y: percent.y,
+                onTable: ball.onTable
+            };
+        }
         return {
-            animationFrames: result.animationFrames,
-            finalBalls: result.finalState,
+            animationFrames: convertedFrames,
+            finalBalls: convertedFinalBalls,
             pocketedBalls: result.pocketedBalls,
             cueBallScratched: result.cueBallScratched
         };
