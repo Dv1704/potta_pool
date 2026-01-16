@@ -25,7 +25,20 @@ export class TurnMode extends GameMode {
         }
 
         this.foulOccurred = false;
-        const result = this.engine.executeShot(angle, power, sideSpin, backSpin);
+        // Use 30x power scaling for realistic feel (matches demo)
+        const result = this.engine.executeShot(angle, power * 30, sideSpin, backSpin);
+
+        // Convert animation frames back to percentages for frontend (0-100%)
+        result.animationFrames = result.animationFrames.map(frame => {
+            const converted: any = {};
+            for (const [ballId, pos] of Object.entries(frame)) {
+                converted[ballId] = {
+                    x: ((pos as any).x / Constants.CANVAS_WIDTH) * 100,
+                    y: ((pos as any).y / Constants.CANVAS_HEIGHT) * 100
+                };
+            }
+            return converted;
+        });
 
         this.processTurnResult(playerId, result);
 
@@ -107,8 +120,9 @@ export class TurnMode extends GameMode {
         const ballStates: any = {};
         balls.forEach(b => {
             ballStates[b.getNumber()] = {
-                x: b.getX(),
-                y: b.getY(),
+                // Convert pixels to percentages (0-100%)
+                x: (b.getX() / Constants.CANVAS_WIDTH) * 100,
+                y: (b.getY() / Constants.CANVAS_HEIGHT) * 100,
                 onTable: b.isBallOnTable()
             };
         });
