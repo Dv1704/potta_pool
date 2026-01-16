@@ -1,109 +1,70 @@
-nohup: ignoring input
 
 > server@1.0.0 start:dev
 > npx prisma generate && nest start --watch
 
-Loaded Prisma config from prisma.config.js.
+Loaded Prisma config from prisma.config.ts.
 
 Prisma schema loaded from prisma/schema.prisma.
 
-✔ Generated Prisma Client (v7.2.0) to ./src/generated/client in 576ms
+✔ Generated Prisma Client (v7.2.0) to ./src/generated/client in 2.40s
 
 Start by importing your Prisma Client (See: https://pris.ly/d/importing-client)
 
-Tip: Interested in query caching in just a few lines of code? Try Accelerate today! https://pris.ly/tip-3-accelerate
+Tip: Need your database queries to be 1000x faster? Accelerate offers you that and more: https://pris.ly/tip-2-accelerate
 
-[2J[3J[H[[90m9:47:48 PM[0m] Starting compilation in watch mode...
+[2J[3J[H[[90m2:49:39 AM[0m] Starting compilation in watch mode...
 
-[[90m9:48:33 PM[0m] Found 0 errors. Watching for file changes.
+[[90m2:54:16 AM[0m] Found 0 errors. Watching for file changes.
 
-(node:41558) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(node:4454) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
 (Use `node --trace-deprecation ...` to show where the warning was created)
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +56ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScheduleModule dependencies initialized[39m[38;5;3m +7ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmailModule dependencies initialized[39m[38;5;3m +4ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRedisModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +2ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGameModule dependencies initialized[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWalletModule dependencies initialized[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "joinQueue" message[39m[38;5;3m +160ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "takeShot" message[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "joinGame" message[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "getGameState" message[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUsersController {/users}:[39m[38;5;3m +2ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/ban, PATCH} route[39m[38;5;3m +3ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/verify-email, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/toggle-2fa, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/auth}:[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/register, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/login, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/logout, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/forgot-password, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/reset-password, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/profile, GET} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWalletController {/wallet}:[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/balance, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/history, GET} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/rates, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/transfer/initiate, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/transfer/confirm, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/debug/inject-balance, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPaymentController {/payments}:[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/deposit/initialize, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/verify/:reference, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/webhook/paystack, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/withdraw, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/admin/withdraw, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/admin}:[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/reconcile, GET} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/dashboard, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mGameController {/game}:[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/stats, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/leaderboard, GET} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/active, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/:id, GET} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/dice, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/coin, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/number, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/wheel, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/card, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/color, POST} route[39m[38;5;3m +1ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/play/pool, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/aviator/bet, POST} route[39m[38;5;3m +0ms[39m
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/aviator/cashout, POST} route[39m[38;5;3m +0ms[39m
-[CrashRecovery] Found 0 crashed games to refund.
-[32m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [32m    LOG[39m [38;5;3m[NestApplication] [39m[32mNest application successfully started[39m[38;5;3m +293ms[39m
-[31m[Nest] 42014  - [39m01/11/2026, 9:49:15 PM [31m  ERROR[39m [38;5;3m[NestApplication] [39m[31mError: listen EADDRINUSE: address already in use :::3000[39m[38;5;3m +2ms[39m
-node:net:1940
-    const ex = new UVExceptionWithHostPort(err, 'listen', address, port);
-               ^
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:36 AM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +730ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScheduleModule dependencies initialized[39m[38;5;3m +5ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmailModule dependencies initialized[39m[38;5;3m +4ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRedisModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +2ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGameModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 4970  - [39m01/16/2026, 2:58:37 AM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWalletModule dependencies initialized[39m[38;5;3m +0ms[39m
+[ioredis] Unhandled error event: Error: connect ETIMEDOUT
+    at TLSSocket.<anonymous> (/home/victor/projects/potta/server/node_modules/ioredis/built/Redis.js:171:41)
+    at Object.onceWrapper (node:events:622:28)
+    at TLSSocket.emit (node:events:508:28)
+    at Socket._onTimeout (node:net:604:8)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[ioredis] Unhandled error event: Error: connect ETIMEDOUT
+    at TLSSocket.<anonymous> (/home/victor/projects/potta/server/node_modules/ioredis/built/Redis.js:171:41)
+    at Object.onceWrapper (node:events:622:28)
+    at TLSSocket.emit (node:events:508:28)
+    at Socket._onTimeout (node:net:604:8)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+[ioredis] Unhandled error event: Error: connect ETIMEDOUT
+    at TLSSocket.<anonymous> (/home/victor/projects/potta/server/node_modules/ioredis/built/Redis.js:171:41)
+    at Object.onceWrapper (node:events:622:28)
+    at TLSSocket.emit (node:events:508:28)
+    at Socket._onTimeout (node:net:604:8)
+    at listOnTimeout (node:internal/timers:605:17)
+    at process.processTimers (node:internal/timers:541:7)
+/home/victor/projects/potta/server/node_modules/ioredis/built/Redis.js:208
+                    reject(new Error(utils_1.CONNECTION_CLOSED_ERROR_MSG));
+                           ^
 
-Error: listen EADDRINUSE: address already in use :::3000
-    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
-    at listenInCluster (node:net:1997:12)
-    at Server.listen (node:net:2102:7)
-    at ExpressAdapter.listen (/home/victor/projects/potta/server/node_modules/@nestjs/platform-express/adapters/express-adapter.js:95:32)
-    at /home/victor/projects/potta/server/node_modules/@nestjs/core/nest-application.js:183:30
-    at new Promise (<anonymous>)
-    at NestApplication.listen (/home/victor/projects/potta/server/node_modules/@nestjs/core/nest-application.js:173:16)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async bootstrap (file:///home/victor/projects/potta/server/dist/src/main.js:37:5) {
-  code: 'EADDRINUSE',
-  errno: -98,
-  syscall: 'listen',
-  address: '::',
-  port: 3000
-}
+Error: Connection is closed.
+    at EventEmitter.connectionCloseHandler (/home/victor/projects/potta/server/node_modules/ioredis/built/Redis.js:208:28)
+    at Object.onceWrapper (node:events:623:26)
+    at EventEmitter.emit (node:events:508:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:84:11)
 
 Node.js v24.12.0

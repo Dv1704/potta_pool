@@ -10,19 +10,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, Post, Body, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
 import { GameService } from '../services/game.service.js';
-import { MiniGameService } from '../services/minigame.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
 let GameController = class GameController {
     gameService;
-    miniGameService;
     prisma;
-    constructor(gameService, miniGameService, prisma) {
+    constructor(gameService, prisma) {
         this.gameService = gameService;
-        this.miniGameService = miniGameService;
         this.prisma = prisma;
     }
     async getStats(req) {
@@ -317,36 +314,11 @@ let GameController = class GameController {
             winnings: payout ? Number(payout.amount) : 0
         };
     }
-    async playDice(req, body) {
-        return this.miniGameService.playDice(req.user.id, Number(body.stake));
-    }
-    async playCoin(req, body) {
-        return this.miniGameService.playCoin(req.user.id, Number(body.stake), body.choice);
-    }
-    async playNumber(req, body) {
-        return this.miniGameService.playNumber(req.user.id, Number(body.stake), Number(body.guess));
-    }
-    async playWheel(req, body) {
-        return this.miniGameService.playWheel(req.user.id, Number(body.stake), body.choice);
-    }
-    async playCard(req, body) {
-        return this.miniGameService.playCard(req.user.id, Number(body.stake));
-    }
-    async playColor(req, body) {
-        return this.miniGameService.playColor(req.user.id, Number(body.stake));
-    }
-    async playPool(req, body) {
-        return this.miniGameService.playPool(req.user.id, Number(body.stake));
-    }
-    async aviatorBet(req, body) {
-        return this.miniGameService.placeAviatorBet(req.user.id, Number(body.stake));
-    }
-    async aviatorCashout(req, body) {
-        return this.miniGameService.cashOutAviator(req.user.id, body.gameId, Number(body.multiplier));
-    }
 };
 __decorate([
     Get('stats'),
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({ summary: 'Get player game statistics' }),
     ApiResponse({ status: 200, description: 'Returns win/loss stats' }),
     __param(0, Request()),
@@ -372,6 +344,8 @@ __decorate([
 ], GameController.prototype, "getActiveGames", null);
 __decorate([
     Get(':id'),
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
     ApiOperation({ summary: 'Get specific game details' }),
     ApiResponse({ status: 200, description: 'Returns game details' }),
     __param(0, Request()),
@@ -380,103 +354,10 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], GameController.prototype, "getMatch", null);
-__decorate([
-    Post('play/dice'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Dice Game' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playDice", null);
-__decorate([
-    Post('play/coin'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Coin Toss' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playCoin", null);
-__decorate([
-    Post('play/number'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Number Rush' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playNumber", null);
-__decorate([
-    Post('play/wheel'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Lucky Wheel' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playWheel", null);
-__decorate([
-    Post('play/card'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Card Flip' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playCard", null);
-__decorate([
-    Post('play/color'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Color Match' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playColor", null);
-__decorate([
-    Post('play/pool'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Play Pool Master' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "playPool", null);
-__decorate([
-    Post('aviator/bet'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Place Aviator Bet' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "aviatorBet", null);
-__decorate([
-    Post('aviator/cashout'),
-    UseGuards(JwtAuthGuard),
-    ApiOperation({ summary: 'Cashout Aviator' }),
-    __param(0, Request()),
-    __param(1, Body()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
-], GameController.prototype, "aviatorCashout", null);
 GameController = __decorate([
     ApiTags('Game'),
     Controller('game'),
-    UseGuards(JwtAuthGuard),
-    ApiBearerAuth('JWT-auth'),
     __metadata("design:paramtypes", [GameService,
-        MiniGameService,
         PrismaService])
 ], GameController);
 export { GameController };

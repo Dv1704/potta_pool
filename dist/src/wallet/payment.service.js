@@ -43,6 +43,7 @@ let PaymentService = PaymentService_1 = class PaymentService {
         // Paystack amount is in kobo/pesewas (x100)
         if (amount <= 0)
             throw new BadRequestException('Amount must be positive');
+        this.logger.log(`Initializing deposit: userId=${userId}, amount=${amount}, callbackUrl=${callbackUrl}`);
         try {
             const response = await axios.post('https://api.paystack.co/transaction/initialize', {
                 email,

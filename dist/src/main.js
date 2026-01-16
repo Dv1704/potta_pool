@@ -7,7 +7,9 @@ import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     app.enableCors({
-        origin: true, // Allow any origin that sends a request
+        origin: (origin, callback) => {
+            callback(null, true);
+        },
         credentials: true,
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
         allowedHeaders: 'Content-Type, Accept, Authorization',
@@ -34,7 +36,7 @@ async function bootstrap() {
         .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('api', app, document);
-    await app.listen(3000);
+    await app.listen(3000, '0.0.0.0');
     console.log(`Application is running on: http://localhost:3000`);
     console.log(`Swagger documentation: http://localhost:3000/api`);
 }

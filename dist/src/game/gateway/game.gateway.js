@@ -16,16 +16,19 @@ import { MatchmakingService } from '../matchmaking/matchmaking.service.js';
 import { GameService } from '../services/game.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WalletService } from '../../wallet/wallet.service.js';
+import { PrismaService } from '../../prisma/prisma.service.js';
 let GameGateway = class GameGateway {
     matchmakingService;
     gameService;
     walletService;
+    prisma;
     server;
     lastShotTime = new Map();
-    constructor(matchmakingService, gameService, walletService) {
+    constructor(matchmakingService, gameService, walletService, prisma) {
         this.matchmakingService = matchmakingService;
         this.gameService = gameService;
         this.walletService = walletService;
+        this.prisma = prisma;
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
             const finishedGames = await this.gameService.checkAllTimeouts();
@@ -47,42 +50,62 @@ let GameGateway = class GameGateway {
         }
     }
     async handleJoinQueue(client, data) {
-        // 1. Insufficient Funds Guard
-        const balance = await this.walletService.getBalance(data.userId);
-        if (balance.available < data.stake) {
-            client.emit('error', { message: 'Insufficient funds for this stake' });
-            return;
-        }
-        const match = await this.matchmakingService.addToQueue({
-            userId: data.userId,
-            socketId: client.id,
-            stake: data.stake,
-            mode: data.mode,
-        });
-        if (match) {
-            const gameId = uuidv4();
-            const playerIds = match.map((p) => p.userId);
-            try {
-                await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
-                const game = await this.gameService.getGame(gameId);
-                match.forEach((p) => {
-                    this.server.to(p.socketId).emit('matchFound', {
-                        gameId,
-                        opponentId: playerIds.find((id) => id !== p.userId),
-                        mode: data.mode,
-                        stake: data.stake,
-                        gameState: game?.mode.getGameState()
+        console.log(`[JoinQueue] Request from ${data.userId} (Socket: ${client.id}) for stake ${data.stake}`);
+        try {
+            // 1. Insufficient Funds Guard
+            const balance = await this.walletService.getBalance(data.userId);
+            console.log(`[JoinQueue] User ${data.userId} balance: ${balance.available}`);
+            if (balance.available < data.stake) {
+                console.warn(`[JoinQueue] Insufficient funds for ${data.userId}: ${balance.available} < ${data.stake}`);
+                client.emit('error', { message: 'Insufficient funds for this stake' });
+                return;
+            }
+            const match = await this.matchmakingService.addToQueue({
+                userId: data.userId,
+                socketId: client.id,
+                stake: data.stake,
+                mode: data.mode,
+            });
+            if (match) {
+                console.log(`[JoinQueue] Match found for ${data.userId}! Creating game...`);
+                const gameId = uuidv4();
+                const playerIds = match.map((p) => p.userId);
+                try {
+                    await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
+                    const game = await this.gameService.getGame(gameId);
+                    // Fetch opponent names from database
+                    for (const p of match) {
+                        const opponentId = playerIds.find((id) => id !== p.userId);
+                        const opponent = await this.prisma.user.findUnique({
+                            where: { id: opponentId },
+                            select: { name: true, email: true }
+                        });
+                        this.server.to(p.socketId).emit('matchFound', {
+                            gameId,
+                            opponentId,
+                            opponentName: opponent?.name || opponent?.email?.split('@')[0] || 'Player',
+                            mode: data.mode,
+                            stake: data.stake,
+                            gameState: game?.mode.getGameState()
+                        });
+                    }
+                    console.log(`[JoinQueue] Game ${gameId} created successfully.`);
+                }
+                catch (error) {
+                    console.error(`[JoinQueue] Failed to create game: ${error.message}`);
+                    match.forEach((p) => {
+                        this.server.to(p.socketId).emit('error', { message: 'Failed to create game: ' + error.message });
                     });
-                });
+                }
             }
-            catch (error) {
-                match.forEach((p) => {
-                    this.server.to(p.socketId).emit('error', { message: 'Failed to create game: ' + error.message });
-                });
+            else {
+                console.log(`[JoinQueue] No match found immediately. User ${data.userId} added to queue.`);
+                client.emit('waitingInQueue', { message: 'Searching for opponent...' });
             }
         }
-        else {
-            client.emit('waitingInQueue', { message: 'Searching for opponent...' });
+        catch (error) {
+            console.error(`[JoinQueue] Error handling join queue: ${error.message}`);
+            client.emit('error', { message: error.message || 'An unexpected error occurred' });
         }
     }
     async handleTakeShot(client, data) {
@@ -110,6 +133,9 @@ let GameGateway = class GameGateway {
     }
     handleJoinGame(client, data) {
         client.join(data.gameId);
+    }
+    async handleLeaveQueue(data) {
+        await this.matchmakingService.removeFromQueue(data.userId);
     }
     async handleGetGameState(client, data) {
         const game = await this.gameService.getGame(data.gameId);
@@ -148,6 +174,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], GameGateway.prototype, "handleJoinGame", null);
 __decorate([
+    SubscribeMessage('leaveQueue'),
+    __param(0, MessageBody()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], GameGateway.prototype, "handleLeaveQueue", null);
+__decorate([
     SubscribeMessage('getGameState'),
     __param(0, ConnectedSocket()),
     __param(1, MessageBody()),
@@ -156,9 +189,20 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], GameGateway.prototype, "handleGetGameState", null);
 GameGateway = __decorate([
-    WebSocketGateway({ cors: { origin: '*' } }),
+    WebSocketGateway({
+        cors: {
+            origin: (origin, callback) => {
+                // Allow all origins
+                callback(null, true);
+            },
+            credentials: true,
+            methods: ['GET', 'POST'],
+        },
+        transports: ['websocket', 'polling']
+    }),
     __metadata("design:paramtypes", [MatchmakingService,
         GameService,
-        WalletService])
+        WalletService,
+        PrismaService])
 ], GameGateway);
 export { GameGateway };
