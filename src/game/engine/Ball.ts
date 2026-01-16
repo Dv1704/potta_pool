@@ -64,6 +64,10 @@ export class Ball {
         return this._vCurForce;
     }
 
+    getVelocity(): Vector2 {
+        return this._vCurForce;
+    }
+
     setTmpForce(iX: number, iY: number): void {
         this._vTmpForce.set(iX, iY);
     }

@@ -10,6 +10,7 @@ export interface ShotResult {
     cueBallScratched: boolean;
     finalState: { [key: number]: { x: number; y: number; onTable: boolean } };
     events: any[];
+    animationFrames: { [key: number]: { x: number; y: number } }[];
 }
 
 export class PoolEngine {
@@ -72,6 +73,7 @@ export class PoolEngine {
 
         const pocketedBalls: number[] = [];
         let cueBallScratched = false;
+        const animationFrames: { [key: number]: { x: number; y: number } }[] = [];
 
         // Simulation loop
         let frames = 0;
@@ -80,6 +82,22 @@ export class PoolEngine {
         do {
             this._physics.update(this._balls);
             frames++;
+
+            // Record Frame (Every 2 frames to save bandwidth, 30fps effective for network)
+            if (frames % 2 === 0) {
+                const frameData: { [key: number]: { x: number; y: number } } = {};
+                let hasMovement = false;
+                for (const ball of this._balls) {
+                    if (ball.isBallOnTable() && (ball.getVelocity().length() > 0.01 || frames === 2)) {
+                        frameData[ball.getNumber()] = { x: ball.getX(), y: ball.getY() };
+                        hasMovement = true;
+                    }
+                }
+                // Only push frames if something is moving (or it's the start)
+                if (hasMovement) {
+                    animationFrames.push(frameData);
+                }
+            }
 
             // Check for pocketed balls in this frame
             for (const ball of this._balls) {
@@ -111,6 +129,7 @@ export class PoolEngine {
             cueBallScratched,
             finalState,
             events: this._physics.getEvents(),
+            animationFrames
         };
     }
 
