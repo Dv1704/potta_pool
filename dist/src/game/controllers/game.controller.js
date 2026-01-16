@@ -32,8 +32,9 @@ let GameController = class GameController {
         const engine = new PoolEngine(1);
         // Convert angle to radians (frontend sends degrees)
         const angleRad = (body.angle * Math.PI) / 180;
-        // Execute the shot with real physics
-        const result = engine.executeShot(angleRad, body.power * 5, 0, 0);
+        // Execute the shot with real physics - power multiplier 30 for realistic feel
+        // At 100% power = 3000 force units = powerful break shot
+        const result = engine.executeShot(angleRad, body.power * 30, 0, 0);
         // Convert pixels to percentages (engine uses 1920x1080 => frontend uses 0-100%)
         const CANVAS_WIDTH = 1920;
         const CANVAS_HEIGHT = 1080;
