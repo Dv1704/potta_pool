@@ -28,7 +28,14 @@ export class SpeedMode extends GameMode {
 
         const result = this.engine.executeShot(angle, power, sideSpin, backSpin);
 
-        this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
+        // Keep turn if balls were pocketed and no foul (scratch) occurred
+        // Simplified rule: Any pocket + No Scratch = Keep Turn
+        const turnKept = result.pocketedBalls.length > 0 && !result.cueBallScratched && result.firstBallCollided !== null;
+
+        if (!turnKept) {
+            this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
+        }
+
         this.resetTimer();
         this.updateStatus();
 
