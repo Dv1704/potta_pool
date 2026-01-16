@@ -3,6 +3,7 @@ import { GameService } from '../services/game.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { PoolEngine } from '../engine/PoolEngine.js';
 
 @ApiTags('Game')
 @Controller('game')
@@ -11,6 +12,39 @@ export class GameController {
         private readonly gameService: GameService,
         private readonly prisma: PrismaService
     ) { }
+
+    /**
+     * Demo Shot Endpoint - Uses real physics engine for demo page
+     * No authentication required
+     */
+    @Post('demo-shot')
+    @ApiOperation({ summary: 'Execute a demo shot with real physics' })
+    @ApiResponse({ status: 200, description: 'Returns animation frames for ball movement' })
+    async demoShot(
+        @Body() body: { angle: number; power: number; balls: any }
+    ) {
+        // Create a temporary engine for this demo shot
+        const engine = new PoolEngine();
+
+        // If custom ball positions provided, set them
+        if (body.balls) {
+            // Reset engine with provided ball positions (for future enhancement)
+        }
+
+        // Convert angle to radians (frontend sends degrees)
+        const angleRad = (body.angle * Math.PI) / 180;
+
+        // Execute the shot with real physics
+        const result = engine.executeShot(angleRad, body.power * 5, 0, 0);
+
+        // Return animation frames and final state
+        return {
+            animationFrames: result.animationFrames,
+            finalBalls: result.finalBalls,
+            pocketedBalls: result.pocketedBalls,
+            cueBallScratched: result.cueBallScratched
+        };
+    }
 
     @Get('stats')
     @UseGuards(JwtAuthGuard)
