@@ -134,16 +134,30 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { gameId: string; userId: string; angle: number; power: number; sideSpin: number; backSpin: number },
     ) {
-        // 2. Input Throttling
+        // Input Throttling
         const lastShot = this.lastShotTime.get(data.userId) || 0;
         const now = Date.now();
         if (now - lastShot < 1000) { // 1 second throttle
-            // client.emit('error', { message: 'Shooting too fast' }); // Optional: don't spam error
             return;
         }
         this.lastShotTime.set(data.userId, now);
 
         try {
+            // 1. INSTANT RELAY (The "iMessage" Feel)
+            // Tell the opponent to start simulating immediately.
+            // We exclude the sender because they are already simulating locally.
+            client.broadcast.to(data.gameId).emit('opponentShotStart', {
+                playerId: data.userId,
+                vector: {
+                    angle: data.angle,
+                    power: data.power,
+                    sideSpin: data.sideSpin || 0,
+                    backSpin: data.backSpin || 0
+                }
+            });
+
+            // 2. SERVER CALCULATION (The "Truth")
+            // This runs the authoritative physics engine
             const result = await this.gameService.handleShot(
                 data.gameId,
                 data.userId,
@@ -153,11 +167,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 data.backSpin || 0
             );
 
+
+            // 3. BROADCAST RESULT (The "Correction")
+            // Send the final resting positions to everyone for verification
             const game = await this.gameService.getGame(data.gameId);
             if (game) {
+                // Enrich with player names
+                const players = await Promise.all(game.players.map(async (pId) => {
+                    const user = await this.prisma.user.findUnique({
+                        where: { id: pId },
+                        select: { id: true, name: true, email: true }
+                    });
+                    return {
+                        id: pId,
+                        name: user?.name || user?.email?.split('@')[0] || 'Player'
+                    };
+                }));
+
+                const state = game.mode.getGameState();
                 this.server.to(data.gameId).emit('shotResult', {
+                    shooterId: data.userId,
                     shotResult: result,
-                    gameState: game.mode.getGameState()
+                    gameState: {
+                        ...state,
+                        players,
+                        stake: game.stake,
+                        betAmount: game.stake
+                    }
                 });
             }
         } catch (error: any) {
@@ -182,7 +218,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const state = game.mode.getGameState();
 
             // Enrich state with player names
-            const players = await Promise.all(game.players.map(async (pId) => {
+            const players = await Promise.all(game.players.map(async (pId, index) => {
                 const user = await this.prisma.user.findUnique({
                     where: { id: pId },
                     select: { id: true, name: true, email: true }
@@ -193,7 +229,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 };
             }));
 
-            client.emit('gameState', { ...state, players });
+            client.emit('gameState', {
+                ...state,
+                players,
+                stake: game.stake,
+                betAmount: game.stake // alias for compatibility
+            });
         }
     }
 }

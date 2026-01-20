@@ -115,7 +115,10 @@ export class SpeedMode extends GameMode {
         for (const ball of balls) {
             const bState = state.balls[ball.getNumber()];
             if (bState) {
-                ball.setPos(bState.x, bState.y);
+                ball.setPos(
+                    (bState.x / 100) * Constants.CANVAS_WIDTH,
+                    (bState.y / 100) * Constants.CANVAS_HEIGHT
+                );
                 ball.setFlagOnTable(bState.onTable);
             }
         }
