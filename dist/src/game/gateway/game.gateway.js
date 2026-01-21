@@ -137,7 +137,9 @@ let GameGateway = class GameGateway {
             });
             // 2. SERVER CALCULATION (The "Truth")
             // This runs the authoritative physics engine
+            process.stdout.write(`[TakeShot] Starting simulation for ${data.gameId}...\n`);
             const result = await this.gameService.handleShot(data.gameId, data.userId, data.angle, data.power, data.sideSpin || 0, data.backSpin || 0);
+            process.stdout.write(`[TakeShot] Simulation complete for ${data.gameId}.\n`);
             // 3. BROADCAST RESULT (The "Correction")
             // Send the final resting positions to everyone for verification
             const game = await this.gameService.getGame(data.gameId);
@@ -167,6 +169,7 @@ let GameGateway = class GameGateway {
             }
         }
         catch (error) {
+            console.error(`[TakeShot] Error from user ${data.userId}: ${error.message}`);
             client.emit('error', { message: error.message });
         }
     }

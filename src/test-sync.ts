@@ -79,6 +79,7 @@ async function testSocket() {
         socket1.on('matchFound', (data: any) => {
             console.log('🔥 Match Found for Player 1!', data.gameId);
             gameId = data.gameId;
+            (socket1 as any).isMyTurn = (data.gameState.turn === user1Id);
             p1Done = true;
             if (p1Done && p2Done) {
                 clearTimeout(timeout);
@@ -88,6 +89,7 @@ async function testSocket() {
 
         socket2.on('matchFound', (data: any) => {
             console.log('🔥 Match Found for Player 2!', data.gameId);
+            (socket2 as any).isMyTurn = (data.gameState.turn === user2Id);
             p2Done = true;
             if (p1Done && p2Done) {
                 clearTimeout(timeout);
@@ -106,28 +108,56 @@ async function testSocket() {
 
     await matchFoundPromise;
 
+    // Determine who is shooting based on the server's turn
+    const shooterSocket = (socket1 as any).isMyTurn ? socket1 : socket2;
+    const observerSocket = (socket1 as any).isMyTurn ? socket2 : socket1;
+    const shooterId = (socket1 as any).isMyTurn ? user1Id : user2Id;
+    const observerId = (socket1 as any).isMyTurn ? user2Id : user1Id;
+
+    console.log(`🚫 Deliberately taking shot with WRONG player (${observerId})...`);
+    observerSocket.emit('takeShot', {
+        gameId,
+        userId: observerId,
+        angle: 0,
+        power: 10
+    });
+
+    const errorPromise = new Promise<void>((resolve) => {
+        observerSocket.once('error', (err: any) => {
+            console.log('✅ Correctly received error for wrong turn:', err.message);
+            resolve();
+        });
+    });
+    await errorPromise;
+
+    console.log(`🔫 Player ${shooterSocket === socket1 ? '1' : '2'} taking CORRECT shot...`);
+
     // 5. TEST SHOT SYNC
     const shotRelayPromise = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject('Shot sync timeout'), 20000);
 
-        socket2.on('opponentShotStart', (data: any) => {
-            console.log('👀 Player 2 received opponentShotStart:', data.vector);
+        observerSocket.on('opponentShotStart', (data: any) => {
+            console.log(`👀 Opponent received opponentShotStart:`, data.vector);
         });
 
-        socket2.on('shotResult', (data: any) => {
-            console.log('🎯 Player 2 received shotResult from:', data.shooterId);
-            if (data.shooterId === user1Id) {
+        observerSocket.on('shotResult', (data: any) => {
+            console.log('🎯 Opponent received shotResult from:', data.shooterId);
+            if (data.shooterId === shooterId) {
                 console.log('🎉 SYNC VERIFIED!');
                 clearTimeout(timeout);
                 resolve();
             }
         });
+
+        shooterSocket.on('error', (err: any) => {
+            console.error('❌ Shooter received error:', err.message);
+            reject('Shooter error: ' + err.message);
+        });
     });
 
-    console.log('🔫 Player 1 taking shot...');
-    socket1.emit('takeShot', {
+    shooterSocket.emit('takeShot', {
         gameId,
-        userId: user1Id,
+        userId: shooterId,
         angle: 45,
         power: 50,
         sideSpin: 0,
@@ -135,6 +165,39 @@ async function testSocket() {
     });
 
     await shotRelayPromise;
+
+    console.log('🔄 Checking turn flip in Redis...');
+    const gameData = await redis.get(`game:active:${gameId}`);
+    if (gameData) {
+        const state = JSON.parse(gameData);
+        console.log(`Next turn is for: ${state.data.turn}`);
+    }
+
+    // 6. SECOND SHOT (By the other player)
+    console.log(`🔫 Player ${observerSocket === socket1 ? '1' : '2'} taking SECOND shot...`);
+    const secondShotPromise = new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject('Second shot timeout'), 20000);
+        shooterSocket.on('opponentShotStart', (data: any) => {
+            console.log('👀 Original shooter received opponentShotStart for 2nd shot');
+        });
+        shooterSocket.on('shotResult', (data: any) => {
+            console.log('🎯 Original shooter received shotResult for 2nd shot');
+            clearTimeout(timeout);
+            resolve();
+        });
+    });
+
+    observerSocket.emit('takeShot', {
+        gameId,
+        userId: observerSocket === socket1 ? user1Id : user2Id,
+        angle: 90,
+        power: 30,
+        sideSpin: 0,
+        backSpin: 0
+    });
+
+    await secondShotPromise;
+    console.log('🎉 DOUBLE SHOT SYNC VERIFIED!');
 
     console.log('🏁 Test finished. Closing sockets.');
     socket1.disconnect();

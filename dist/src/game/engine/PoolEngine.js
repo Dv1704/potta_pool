@@ -58,7 +58,7 @@ export class PoolEngine {
         let cueBallScratched = false;
         const animationFrames = [];
         let frames = 0;
-        const maxFrames = 3000; // 5 seconds @ 60fps safety cap
+        const maxFrames = 1000; // 15 seconds @ 60fps safety cap
         do {
             this._physics.update(this._balls);
             frames++;

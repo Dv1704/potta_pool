@@ -165,6 +165,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             // 2. SERVER CALCULATION (The "Truth")
             // This runs the authoritative physics engine
+            process.stdout.write(`[TakeShot] Starting simulation for ${data.gameId}...\n`);
             const result = await this.gameService.handleShot(
                 data.gameId,
                 data.userId,
@@ -173,6 +174,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 data.sideSpin || 0,
                 data.backSpin || 0
             );
+            process.stdout.write(`[TakeShot] Simulation complete for ${data.gameId}.\n`);
 
 
             // 3. BROADCAST RESULT (The "Correction")
@@ -204,6 +206,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 });
             }
         } catch (error: any) {
+            console.error(`[TakeShot] Error from user ${data.userId}: ${error.message}`);
             client.emit('error', { message: error.message });
         }
     }

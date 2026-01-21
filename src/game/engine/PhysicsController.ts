@@ -318,9 +318,9 @@ export class PhysicsController {
             return false;
         }
 
-        const iFactorForce = 2.0;
+        const iFactorForce = 4.0;
         let iTimes = Math.floor(iCurForce / iFactorForce);
-        if (iTimes > 50) iTimes = 50; // Balanced cap
+        if (iTimes > 30) iTimes = 30;
         let bHit = false;
         const vPos = new Vector2();
         vPos.setV(oBall.getPrevPos());
