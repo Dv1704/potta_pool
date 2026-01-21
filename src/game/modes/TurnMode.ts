@@ -25,8 +25,8 @@ export class TurnMode extends GameMode {
         }
 
         this.foulOccurred = false;
-        // Use 30x power scaling for realistic feel (matches demo)
-        const result = this.engine.executeShot(angle, power * 30, sideSpin, backSpin);
+        // Use 1.0x power scaling (matches frontend)
+        const result = this.engine.executeShot(angle, power, sideSpin, backSpin);
 
         // Convert animation frames back to percentages for frontend (0-100%)
         result.animationFrames = result.animationFrames.map(frame => {

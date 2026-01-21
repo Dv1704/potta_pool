@@ -59,15 +59,19 @@ export class PoolEngine {
     public executeShot(angle: number, power: number, sideSpin: number, backSpin: number): ShotResult {
         const cueBall = this._balls[0];
         if (!cueBall.isBallOnTable()) {
-            // Logic for re-placing cue ball if it was scratched
             cueBall.setPos(Constants.CUE_BALL_POS.x, Constants.CUE_BALL_POS.y);
             cueBall.setFlagOnTable(true);
         }
 
         this._physics.resetEvents();
 
-        const force = new Vector2(Math.cos(angle), Math.sin(angle));
-        force.scalarProduct(power);
+        const fRad = (angle * Math.PI) / 180;
+        const force = new Vector2(Math.cos(fRad), Math.sin(fRad));
+
+        // Match frontend scaling if needed, but for now let's just cap it
+        const cappedPower = Math.min(power, Constants.MAX_POWER_SHOT || 200);
+        force.scalarProduct(cappedPower);
+
         cueBall.addForce(force);
         cueBall.setSideEffect(sideSpin);
 
@@ -75,45 +79,42 @@ export class PoolEngine {
         let cueBallScratched = false;
         const animationFrames: { [key: number]: { x: number; y: number } }[] = [];
 
-        // Simulation loop
         let frames = 0;
-        const maxFrames = 6000; // 10 seconds at 60 FPS safety cap
+        const maxFrames = 3000; // 5 seconds @ 60fps safety cap
 
         do {
             this._physics.update(this._balls);
             frames++;
 
-            // Record Frame (Every 2 frames to save bandwidth, 30fps effective for network)
+            // Record frame data (every 2 frames for efficiency)
             if (frames % 2 === 0) {
-                const frameData: { [key: number]: { x: number; y: number } } = {};
+                const frameData: any = {};
                 let hasMovement = false;
                 for (const ball of this._balls) {
-                    if (ball.isBallOnTable() && (ball.getVelocity().length() > 0.01 || frames === 2)) {
+                    if (ball.isBallOnTable()) {
                         frameData[ball.getNumber()] = { x: ball.getX(), y: ball.getY() };
-                        hasMovement = true;
+                        if (ball.getVelocity().length2() > 0.001) hasMovement = true;
                     }
                 }
-                // Only push frames if something is moving (or it's the start)
-                if (hasMovement) {
+                if (hasMovement || frames === 2) {
                     animationFrames.push(frameData);
                 }
             }
 
-            // Check for pocketed balls in this frame
+            // Handle pocketing
             for (const ball of this._balls) {
                 if (ball.getHole() && ball.isBallOnTable()) {
                     if (ball.getNumber() === 0) {
                         cueBallScratched = true;
-                        ball.setFlagOnTable(false);
                     } else {
                         pocketedBalls.push(ball.getNumber());
-                        ball.setFlagOnTable(false);
                     }
+                    ball.setFlagOnTable(false);
                 }
             }
         } while (!this._physics.areBallsStopped() && frames < maxFrames);
 
-        const finalState: { [key: number]: { x: number; y: number; onTable: boolean } } = {};
+        const finalState: any = {};
         for (const ball of this._balls) {
             finalState[ball.getNumber()] = {
                 x: ball.getX(),

@@ -97,6 +97,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
                     // Fetch opponent names from database
                     for (const p of match) {
+                        const socket = this.server.sockets.sockets.get(p.socketId);
+                        if (socket) {
+                            socket.join(gameId);
+                            console.log(`[JoinQueue] Socket ${p.socketId} joined room ${gameId}`);
+                        }
+
                         const opponentId = playerIds.find((id: string) => id !== p.userId);
                         const opponent = await this.prisma.user.findUnique({
                             where: { id: opponentId },
@@ -134,6 +140,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @ConnectedSocket() client: Socket,
         @MessageBody() data: { gameId: string; userId: string; angle: number; power: number; sideSpin: number; backSpin: number },
     ) {
+        console.log(`[TakeShot] Request from ${data.userId} for game ${data.gameId}`);
         // Input Throttling
         const lastShot = this.lastShotTime.get(data.userId) || 0;
         const now = Date.now();

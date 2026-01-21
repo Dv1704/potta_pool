@@ -274,6 +274,9 @@ export class PhysicsController {
 
         vRayCollision.setV(oBall.getPos());
         vRayCollision.subtract(aCollisions[iPos].oBall.getPos());
+        if (vRayCollision.length2() === 0) {
+            vRayCollision.set(Math.random() * 0.1, Math.random() * 0.1);
+        }
         vRayCollision.normalize();
         vPos.setV(vRayCollision);
         vPos.scalarProduct(Constants.BALL_DIAMETER * 1.05);
@@ -315,8 +318,9 @@ export class PhysicsController {
             return false;
         }
 
-        const iFactorForce = 0.2;
-        const iTimes = Math.floor(iCurForce / iFactorForce);
+        const iFactorForce = 2.0;
+        let iTimes = Math.floor(iCurForce / iFactorForce);
+        if (iTimes > 50) iTimes = 50; // Balanced cap
         let bHit = false;
         const vPos = new Vector2();
         vPos.setV(oBall.getPrevPos());
@@ -386,6 +390,7 @@ export class PhysicsController {
         this._bAllBallsStopped = true;
 
         for (const oBall of aBalls) {
+            // console.log(`[Physics] checking ball ${oBall.getNumber()} onTable=${oBall.isBallOnTable()}`);
             oBall.addCurForce(oBall.getTmpForce());
             oBall.setTmpForce(0, 0);
             oBall.setPrevPos(oBall.getPos());
@@ -443,7 +448,8 @@ export class PhysicsController {
 
             oBall.scalarProductCurForce(Constants.K_FRICTION);
 
-            if (oBall.getCurForceLen2() < Constants.K_MIN_FORCE) {
+            const forceLen2 = oBall.getCurForceLen2();
+            if (forceLen2 < Constants.K_MIN_FORCE) {
                 oBall.setCurForce(0, 0);
             } else if (oBall.isBallOnTable()) {
                 this._bAllBallsStopped = false;

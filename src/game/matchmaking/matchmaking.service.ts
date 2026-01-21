@@ -38,34 +38,47 @@ export class MatchmakingService {
     async addToQueue(player: PlayerInfo): Promise<PlayerInfo[] | null> {
         const bracket = this.getBracket(player.stake);
         const key = this.getQueueKey(player.mode, bracket);
+        const lockKey = `${key}:lock`;
 
-        // Check if player is already in queue (simplified check)
-        const existing = await this.redis.lrange(key, 0, -1);
-        if (existing.some(p => JSON.parse(p).userId === player.userId)) {
-            return null;
+        // simple distributed lock for matchmaking
+        const lock = await this.redis.set(lockKey, 'locked', 'EX', 2, 'NX');
+        if (!lock) {
+            // If locked, retry slightly later
+            await new Promise(resolve => setTimeout(resolve, 100));
+            return this.addToQueue(player);
         }
 
-        // Try to find a match in primary bracket
-        let opponentJson = await this.redis.lpop(key);
-
-        // If no match in primary bracket, try adjacent brackets
-        if (!opponentJson) {
-            const adjacentBrackets = this.getAdjacentBrackets(bracket);
-            for (const adjBracket of adjacentBrackets) {
-                const adjKey = this.getQueueKey(player.mode, adjBracket);
-                opponentJson = await this.redis.lpop(adjKey);
-                if (opponentJson) break;
+        try {
+            // Check if player is already in queue
+            const existing = await this.redis.lrange(key, 0, -1);
+            if (existing.some(p => JSON.parse(p).userId === player.userId)) {
+                return null;
             }
-        }
 
-        if (opponentJson) {
-            const opponent = JSON.parse(opponentJson);
-            return [player, opponent];
-        }
+            // Try to find a match in primary bracket
+            let opponentJson = await this.redis.lpop(key);
 
-        // No match found, add to queue
-        await this.redis.rpush(key, JSON.stringify(player));
-        return null;
+            // If no match in primary bracket, try adjacent brackets
+            if (!opponentJson) {
+                const adjacentBrackets = this.getAdjacentBrackets(bracket);
+                for (const adjBracket of adjacentBrackets) {
+                    const adjKey = this.getQueueKey(player.mode, adjBracket);
+                    opponentJson = await this.redis.lpop(adjKey);
+                    if (opponentJson) break;
+                }
+            }
+
+            if (opponentJson) {
+                const opponent = JSON.parse(opponentJson);
+                return [player, opponent];
+            }
+
+            // No match found, add to queue
+            await this.redis.rpush(key, JSON.stringify(player));
+            return null;
+        } finally {
+            await this.redis.del(lockKey);
+        }
     }
 
     async removeFromQueue(userId: string): Promise<void> {
