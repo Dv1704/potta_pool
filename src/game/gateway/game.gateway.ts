@@ -221,6 +221,19 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async handlePlayerReady(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string, userId: string }) {
         console.log(`[PlayerReady] User ${data.userId} is ready for game ${data.gameId}`);
 
+        const game = await this.gameService.getGame(data.gameId);
+
+        // 1. Recovery: If game started, just send them the state immediately.
+        if (game && game.mode.isStarted()) {
+            console.log(`[PlayerReady] Game ${data.gameId} already started. Sending state to ${data.userId}`);
+            client.emit('startMatch', {
+                gameId: data.gameId,
+                startTime: Date.now(),
+                gameState: game.mode.getGameState()
+            });
+            return;
+        }
+
         if (!this.readyPlayers.has(data.gameId)) {
             this.readyPlayers.set(data.gameId, new Set());
         }
@@ -228,8 +241,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const readySet = this.readyPlayers.get(data.gameId)!;
         readySet.add(data.userId);
 
+        console.log(`[PlayerReady] Game ${data.gameId} Ready Count: ${readySet.size}/${game?.players.length}`);
+
         // Check if all players are ready
-        const game = await this.gameService.getGame(data.gameId);
         if (game && readySet.size >= game.players.length) {
             console.log(`[PlayerReady] All players ready for game ${data.gameId}. Starting...`);
             const state = await this.gameService.startGame(data.gameId);

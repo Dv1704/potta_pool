@@ -40,6 +40,10 @@ export abstract class GameMode {
         return this.isGameOver;
     }
 
+    public isStarted(): boolean {
+        return this.isGameStarted;
+    }
+
     public getWinner(): string | null {
         return this.winner;
     }
