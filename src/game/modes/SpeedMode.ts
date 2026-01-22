@@ -101,6 +101,7 @@ export class SpeedMode extends GameMode {
             isGameOver: this.isGameOver,
             winner: this.winner,
             timer: this.isGameStarted ? Math.max(0, Math.floor((this.turnExpiration - Date.now()) / 1000)) : 60,
+            turnExpiration: this.turnExpiration,
             isGameStarted: this.isGameStarted
         };
     }

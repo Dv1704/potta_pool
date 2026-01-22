@@ -7,6 +7,7 @@ export interface GameState {
     isGameOver: boolean;
     winner: string | null;
     timer?: number;
+    turnExpiration?: number;
     isGameStarted: boolean;
 }
 

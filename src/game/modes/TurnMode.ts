@@ -154,6 +154,7 @@ export class TurnMode extends GameMode {
             isGameOver: this.isGameOver,
             winner: this.winner,
             timer: this.isGameStarted ? Math.max(0, Math.ceil((this.turnExpiration - Date.now()) / 1000)) : 30,
+            turnExpiration: this.turnExpiration,
             isGameStarted: this.isGameStarted
         };
     }
