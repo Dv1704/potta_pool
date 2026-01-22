@@ -31,6 +31,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     server!: Server;
 
     private lastShotTime: Map<string, number> = new Map();
+    private readyPlayers: Map<string, Set<string>> = new Map();
 
     constructor(
         private matchmakingService: MatchmakingService,
@@ -214,6 +215,34 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @SubscribeMessage('joinGame')
     handleJoinGame(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
         client.join(data.gameId);
+    }
+
+    @SubscribeMessage('playerReady')
+    async handlePlayerReady(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string, userId: string }) {
+        console.log(`[PlayerReady] User ${data.userId} is ready for game ${data.gameId}`);
+
+        if (!this.readyPlayers.has(data.gameId)) {
+            this.readyPlayers.set(data.gameId, new Set());
+        }
+
+        const readySet = this.readyPlayers.get(data.gameId)!;
+        readySet.add(data.userId);
+
+        // Check if all players are ready
+        const game = await this.gameService.getGame(data.gameId);
+        if (game && readySet.size >= game.players.length) {
+            console.log(`[PlayerReady] All players ready for game ${data.gameId}. Starting...`);
+            const state = await this.gameService.startGame(data.gameId);
+
+            this.server.to(data.gameId).emit('startMatch', {
+                gameId: data.gameId,
+                startTime: Date.now(),
+                gameState: state
+            });
+
+            // Clean up ready set
+            this.readyPlayers.delete(data.gameId);
+        }
     }
 
     @SubscribeMessage('leaveQueue')

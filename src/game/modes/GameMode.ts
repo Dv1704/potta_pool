@@ -7,6 +7,7 @@ export interface GameState {
     isGameOver: boolean;
     winner: string | null;
     timer?: number;
+    isGameStarted: boolean;
 }
 
 export abstract class GameMode {
@@ -14,12 +15,15 @@ export abstract class GameMode {
     protected players: string[]; // [player1Id, player2Id]
     protected currentTurnIndex: number = 0;
     protected isGameOver: boolean = false;
+    protected isGameStarted: boolean = false;
     protected winner: string | null = null;
 
     constructor(players: string[], mode: number) {
         this.players = players;
         this.engine = new PoolEngine(mode);
     }
+
+    abstract startGame(): void;
 
     abstract handleShot(playerId: string, angle: number, power: number, sideSpin: number, backSpin: number): ShotResult;
     abstract updateStatus(): void;

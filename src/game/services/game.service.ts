@@ -132,6 +132,15 @@ export class GameService implements OnModuleInit {
         return result;
     }
 
+    async startGame(gameId: string) {
+        const game = await this.loadGame(gameId);
+        if (!game) throw new Error('Game not found');
+
+        game.mode.startGame();
+        await this.saveGame(gameId, game);
+        return game.mode.getGameState();
+    }
+
     async endGame(gameId: string) {
         const game = await this.loadGame(gameId);
         if (!game) return;
