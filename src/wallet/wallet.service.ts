@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, BadRequestException, NotFound
 import { PrismaService } from '../prisma/prisma.service.js';
 import { FXService } from './fx.service.js';
 import * as crypto from 'crypto';
-import { Prisma } from '../generated/client/client.js';
+import { Prisma } from '@prisma/client';
 
 const SYSTEM_EMAIL = 'system@pottagame.com';
 

@@ -11,7 +11,7 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service.js';
 import { FXService } from './fx.service.js';
 import * as crypto from 'crypto';
-import { Prisma } from '../generated/client/client.js';
+import { Prisma } from '@prisma/client';
 const SYSTEM_EMAIL = 'system@pottagame.com';
 let WalletService = class WalletService {
     prisma;

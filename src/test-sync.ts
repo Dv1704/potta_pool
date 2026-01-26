@@ -1,5 +1,5 @@
 import { io } from 'socket.io-client';
-import { PrismaClient } from './generated/client/index.js';
+import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import process from 'process';
 import { Redis } from 'ioredis';

@@ -10,15 +10,32 @@ export class TurnMode extends GameMode {
     playerGroups = {};
     groupAssigned = false;
     foulOccurred = false;
+    turnExpiration = 0;
+    SHOT_TIMEOUT_MS = 30000;
     constructor(players) {
         super(players, Constants.GAME_MODE_EIGHT);
         this.players.forEach(id => this.playerGroups[id] = BallGroup.NONE);
+        // Timer does NOT start here.
+    }
+    startGame() {
+        this.isGameStarted = true;
+        this.resetTimer();
+    }
+    resetTimer() {
+        this.turnExpiration = Date.now() + this.SHOT_TIMEOUT_MS;
     }
     handleShot(playerId, angle, power, sideSpin, backSpin) {
         if (this.isGameOver)
             throw new Error('Game is already over');
+        if (!this.isGameStarted)
+            throw new Error('Game has not started yet');
         if (playerId !== this.players[this.currentTurnIndex]) {
             throw new Error('Not your turn');
+        }
+        if (Date.now() > this.turnExpiration) {
+            this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
+            this.resetTimer();
+            throw new Error('Turn timed out');
         }
         this.foulOccurred = false;
         // Use 1.0x power scaling (matches frontend)
@@ -38,6 +55,7 @@ export class TurnMode extends GameMode {
         if (result.pocketedBalls.length === 0 || this.foulOccurred) {
             this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
         }
+        this.resetTimer();
         this.updateStatus();
         return result;
     }
@@ -122,13 +140,17 @@ export class TurnMode extends GameMode {
             balls: ballStates,
             turn: this.players[this.currentTurnIndex],
             isGameOver: this.isGameOver,
-            winner: this.winner
+            winner: this.winner,
+            timer: this.isGameStarted ? Math.max(0, Math.ceil((this.turnExpiration - Date.now()) / 1000)) : 30,
+            turnExpiration: this.turnExpiration,
+            isGameStarted: this.isGameStarted
         };
     }
     serialize() {
         return {
             turnIndex: this.currentTurnIndex,
             isGameOver: this.isGameOver,
+            isGameStarted: this.isGameStarted,
             winner: this.winner,
             playerGroups: this.playerGroups,
             groupAssigned: this.groupAssigned,
@@ -139,6 +161,7 @@ export class TurnMode extends GameMode {
     hydrate(state) {
         this.currentTurnIndex = state.turnIndex;
         this.isGameOver = state.isGameOver;
+        this.isGameStarted = state.isGameStarted;
         this.winner = state.winner;
         this.playerGroups = state.playerGroups;
         this.groupAssigned = state.groupAssigned;

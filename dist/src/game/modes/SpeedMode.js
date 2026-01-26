@@ -5,6 +5,10 @@ export class SpeedMode extends GameMode {
     TIMEOUT_MS = 60000;
     constructor(players) {
         super(players, Constants.GAME_MODE_NINE); // Using 9-ball for speed mode as a default
+        // Timer does NOT start here. It starts on startGame()
+    }
+    startGame() {
+        this.isGameStarted = true;
         this.resetTimer();
     }
     resetTimer() {
@@ -13,6 +17,8 @@ export class SpeedMode extends GameMode {
     handleShot(playerId, angle, power, sideSpin, backSpin) {
         if (this.isGameOver)
             throw new Error('Game is already over');
+        if (!this.isGameStarted)
+            throw new Error('Game has not started yet');
         if (playerId !== this.players[this.currentTurnIndex]) {
             throw new Error('Not your turn');
         }
@@ -48,6 +54,8 @@ export class SpeedMode extends GameMode {
         this.winner = this.players[(this.currentTurnIndex + 1) % 2];
     }
     updateStatus() {
+        if (!this.isGameStarted)
+            return;
         if (!this.isGameOver && Date.now() > this.turnExpiration) {
             this.handleTimeout();
         }
@@ -74,7 +82,9 @@ export class SpeedMode extends GameMode {
             turn: this.players[this.currentTurnIndex],
             isGameOver: this.isGameOver,
             winner: this.winner,
-            timer: Math.max(0, Math.floor((this.turnExpiration - Date.now()) / 1000))
+            timer: this.isGameStarted ? Math.max(0, Math.floor((this.turnExpiration - Date.now()) / 1000)) : 60,
+            turnExpiration: this.turnExpiration,
+            isGameStarted: this.isGameStarted
         };
     }
     serialize() {
@@ -82,6 +92,7 @@ export class SpeedMode extends GameMode {
             turnIndex: this.currentTurnIndex,
             turnExpiration: this.turnExpiration,
             isGameOver: this.isGameOver,
+            isGameStarted: this.isGameStarted,
             winner: this.winner,
             balls: this.getGameState().balls
         };
@@ -90,6 +101,7 @@ export class SpeedMode extends GameMode {
         this.currentTurnIndex = state.turnIndex;
         this.turnExpiration = state.turnExpiration;
         this.isGameOver = state.isGameOver;
+        this.isGameStarted = state.isGameStarted;
         this.winner = state.winner;
         const balls = this.getBalls();
         for (const ball of balls) {

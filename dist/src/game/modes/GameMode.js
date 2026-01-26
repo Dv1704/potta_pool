@@ -4,6 +4,7 @@ export class GameMode {
     players; // [player1Id, player2Id]
     currentTurnIndex = 0;
     isGameOver = false;
+    isGameStarted = false;
     winner = null;
     constructor(players, mode) {
         this.players = players;
@@ -14,6 +15,9 @@ export class GameMode {
     }
     isFinished() {
         return this.isGameOver;
+    }
+    isStarted() {
+        return this.isGameStarted;
     }
     getWinner() {
         return this.winner;

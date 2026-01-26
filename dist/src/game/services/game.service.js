@@ -127,6 +127,14 @@ let GameService = class GameService {
         }
         return result;
     }
+    async startGame(gameId) {
+        const game = await this.loadGame(gameId);
+        if (!game)
+            throw new Error('Game not found');
+        game.mode.startGame();
+        await this.saveGame(gameId, game);
+        return game.mode.getGameState();
+    }
     async endGame(gameId) {
         const game = await this.loadGame(gameId);
         if (!game)

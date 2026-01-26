@@ -24,6 +24,7 @@ let GameGateway = class GameGateway {
     prisma;
     server;
     lastShotTime = new Map();
+    readyPlayers = new Map();
     constructor(matchmakingService, gameService, walletService, prisma) {
         this.matchmakingService = matchmakingService;
         this.gameService = gameService;
@@ -176,6 +177,38 @@ let GameGateway = class GameGateway {
     handleJoinGame(client, data) {
         client.join(data.gameId);
     }
+    async handlePlayerReady(client, data) {
+        console.log(`[PlayerReady] User ${data.userId} is ready for game ${data.gameId}`);
+        const game = await this.gameService.getGame(data.gameId);
+        // 1. Recovery: If game started, just send them the state immediately.
+        if (game && game.mode.isStarted()) {
+            console.log(`[PlayerReady] Game ${data.gameId} already started. Sending state to ${data.userId}`);
+            client.emit('startMatch', {
+                gameId: data.gameId,
+                startTime: Date.now(),
+                gameState: game.mode.getGameState()
+            });
+            return;
+        }
+        if (!this.readyPlayers.has(data.gameId)) {
+            this.readyPlayers.set(data.gameId, new Set());
+        }
+        const readySet = this.readyPlayers.get(data.gameId);
+        readySet.add(data.userId);
+        console.log(`[PlayerReady] Game ${data.gameId} Ready Count: ${readySet.size}/${game?.players.length}`);
+        // Check if all players are ready
+        if (game && readySet.size >= game.players.length) {
+            console.log(`[PlayerReady] All players ready for game ${data.gameId}. Starting...`);
+            const state = await this.gameService.startGame(data.gameId);
+            this.server.to(data.gameId).emit('startMatch', {
+                gameId: data.gameId,
+                startTime: Date.now(),
+                gameState: state
+            });
+            // Clean up ready set
+            this.readyPlayers.delete(data.gameId);
+        }
+    }
     async handleLeaveQueue(data) {
         await this.matchmakingService.removeFromQueue(data.userId);
     }
@@ -231,6 +264,14 @@ __decorate([
     __metadata("design:paramtypes", [Socket, Object]),
     __metadata("design:returntype", void 0)
 ], GameGateway.prototype, "handleJoinGame", null);
+__decorate([
+    SubscribeMessage('playerReady'),
+    __param(0, ConnectedSocket()),
+    __param(1, MessageBody()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Socket, Object]),
+    __metadata("design:returntype", Promise)
+], GameGateway.prototype, "handlePlayerReady", null);
 __decorate([
     SubscribeMessage('leaveQueue'),
     __param(0, MessageBody()),
