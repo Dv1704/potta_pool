@@ -2,8 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor.js';
-import { RedisIoAdapter } from './redis/redis-io.adapter.js';
-import { ConfigService } from '@nestjs/config';
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     app.enableCors({
@@ -15,11 +13,11 @@ async function bootstrap() {
         allowedHeaders: 'Content-Type, Accept, Authorization',
     });
     app.useGlobalInterceptors(new LoggingInterceptor());
-    const configService = app.get(ConfigService);
-    const redisUrl = configService.get('REDIS_URL') || 'redis://localhost:6379';
-    const redisIoAdapter = new RedisIoAdapter(app);
-    await redisIoAdapter.connectToRedis(redisUrl);
-    app.useWebSocketAdapter(redisIoAdapter);
+    // Redis Adapter removed for cost optimization and single-node simplicity
+    // const redisUrl = configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
+    // const redisIoAdapter = new RedisIoAdapter(app);
+    // await redisIoAdapter.connectToRedis(redisUrl);
+    // app.useWebSocketAdapter(redisIoAdapter);
     // Swagger configuration
     const config = new DocumentBuilder()
         .setTitle('Potta Pool API')

@@ -1,6 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Redis } from 'ioredis';
+import RedisMock from 'ioredis-mock';
 
 @Global()
 @Module({
@@ -8,8 +8,9 @@ import { Redis } from 'ioredis';
         {
             provide: 'REDIS_CLIENT',
             useFactory: (configService: ConfigService) => {
-                const redisUrl = configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
-                return new Redis(redisUrl);
+                // Using in-memory Redis mock for single-node cost optimization
+                console.log('Using in-memory Redis (ioredis-mock)');
+                return new RedisMock();
             },
             inject: [ConfigService],
         },
