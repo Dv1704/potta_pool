@@ -1,0 +1,83 @@
+
+> server@1.0.0 start:prod
+> node dist/src/main
+
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[NestFactory] [39m[32mStarting Nest application...[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPrismaModule dependencies initialized[39m[38;5;3m +37ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mPassportModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mThrottlerModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigHostModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mDiscoveryModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAppModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mConfigModule dependencies initialized[39m[38;5;3m +0ms[39m
+Using in-memory Redis (ioredis-mock)
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mScheduleModule dependencies initialized[39m[38;5;3m +9ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mEmailModule dependencies initialized[39m[38;5;3m +4ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mRedisModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mJwtModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mUsersModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAdminModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mAuthModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mGameModule dependencies initialized[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[InstanceLoader] [39m[32mWalletModule dependencies initialized[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "joinQueue" message[39m[38;5;3m +77ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "takeShot" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "joinGame" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "playerReady" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "leaveQueue" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[WebSocketsController] [39m[32mGameGateway subscribed to the "getGameState" message[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mUsersController {/users}:[39m[38;5;3m +2ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/:id/ban, PATCH} route[39m[38;5;3m +4ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/verify-email, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/users/toggle-2fa, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAuthController {/auth}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/register, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/login, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/logout, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/forgot-password, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/reset-password, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/auth/profile, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mWalletController {/wallet}:[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/balance, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/history, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/rates, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/transfer/initiate, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/transfer/confirm, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/wallet/debug/inject-balance, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mPaymentController {/payments}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/deposit/initialize, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/verify/:reference, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/webhook/flutterwave, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/withdraw, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/payments/admin/withdraw, POST} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mAdminController {/admin}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/reconcile, GET} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/admin/dashboard, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RoutesResolver] [39m[32mGameController {/game}:[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/demo-shot, POST} route[39m[38;5;3m +1ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/stats, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/leaderboard, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/active, GET} route[39m[38;5;3m +0ms[39m
+[32m[Nest] 12630  - [39m03/05/2026, 2:28:18 PM [32m    LOG[39m [38;5;3m[RouterExplorer] [39m[32mMapped {/game/:id, GET} route[39m[38;5;3m +1ms[39m
+(node:12630) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+/home/victor/projects/potta/server/node_modules/pg-pool/index.js:45
+    Error.captureStackTrace(err)
+          ^
+
+Error: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string
+    at /home/victor/projects/potta/server/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async PrismaPgAdapter.performIO (file:///home/victor/projects/potta/server/node_modules/@prisma/adapter-pg/dist/index.mjs:616:22)
+    at async PrismaPgAdapter.queryRaw (file:///home/victor/projects/potta/server/node_modules/@prisma/adapter-pg/dist/index.mjs:566:30)
+    at async /home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:11:24331
+    at async fr (/home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:11:24170)
+    at async e.interpretNode (/home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:11:42277)
+    at async e.interpretNode (/home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:11:43875)
+    at async e.run (/home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:11:41116)
+    at async e.execute (/home/victor/projects/potta/server/node_modules/@prisma/client/runtime/client.js:57:682) {
+  clientVersion: '7.2.0'
+}
+
+Node.js v24.13.1

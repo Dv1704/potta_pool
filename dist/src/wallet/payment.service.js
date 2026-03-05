@@ -26,84 +26,91 @@ let PaymentService = PaymentService_1 = class PaymentService {
     fxService;
     adminService;
     logger = new Logger(PaymentService_1.name);
-    PAYSTACK_SECRET;
+    KORA_SECRET;
+    KORA_PUBLIC;
+    KORA_WEBHOOK_HASH;
+    KORA_BASE_URL = 'https://api.korapay.com/merchant/api/v1';
     constructor(prisma, configService, walletService, fxService, adminService) {
         this.prisma = prisma;
         this.configService = configService;
         this.walletService = walletService;
         this.fxService = fxService;
         this.adminService = adminService;
-        this.PAYSTACK_SECRET = this.configService.get('PAYSTACK_SECRET_KEY') || 'secretKey';
+        this.KORA_SECRET = this.configService.get('KORA_SECRET_KEY') || 'secretKey';
+        this.KORA_PUBLIC = this.configService.get('KORA_PUBLIC_KEY') || 'publicKey';
+        this.KORA_WEBHOOK_HASH = this.configService.get('KORA_WEBHOOK_HASH') || 'webhookSecret';
+    }
+    koraHeaders() {
+        return {
+            Authorization: `Bearer ${this.KORA_SECRET}`,
+            'Content-Type': 'application/json',
+        };
     }
     /**
-     * Initialize a Paystack transaction
+     * Initialize a Korapay Checkout transaction
      */
     async initializeDeposit(userId, email, amount, currency, callbackUrl) {
-        // We always convert to GHS for internal balance, but we can charge in USD/GHS via Paystack
-        // Paystack amount is in kobo/pesewas (x100)
         if (amount <= 0)
             throw new BadRequestException('Amount must be positive');
-        this.logger.log(`Initializing deposit: userId=${userId}, amount=${amount}, callbackUrl=${callbackUrl}`);
+        this.logger.log(`Initializing deposit: userId=${userId}, amount=${amount}, currency=${currency}`);
+        const reference = `POTTA-${userId}-${Date.now()}`;
         try {
-            const response = await axios.post('https://api.paystack.co/transaction/initialize', {
-                email,
-                amount: Math.round(amount * 100),
+            const response = await axios.post(`${this.KORA_BASE_URL}/charges/initialize`, {
+                reference,
+                amount,
                 currency: currency.toUpperCase(),
-                metadata: { userId, internalCurrency: currency },
-                callback_url: callbackUrl,
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.PAYSTACK_SECRET}`,
-                    'Content-Type': 'application/json',
+                redirect_url: callbackUrl,
+                notification_url: this.configService.get('KORA_WEBHOOK_URL'),
+                customer: {
+                    email,
+                    name: email.split('@')[0],
                 },
-            });
-            return response.data.data; // Includes authorization_url and reference
+                metadata: { userId, internalCurrency: currency },
+            }, { headers: this.koraHeaders() });
+            // Korapay returns data.checkout_url
+            const checkoutUrl = response.data?.data?.checkout_url;
+            if (!checkoutUrl)
+                throw new Error('No checkout_url in Korapay response');
+            return {
+                authorization_url: checkoutUrl,
+                reference,
+            };
         }
         catch (error) {
-            this.logger.error(`Paystack init error: ${error.response?.data?.message || error.message}`);
+            this.logger.error(`Korapay init error: ${error.response?.data?.message || error.message}`);
             throw new BadRequestException('Failed to initialize payment');
         }
     }
     /**
-     * Verify Paystack Transaction (Manual Verification)
+     * Verify Korapay Transaction (Manual Verification by reference)
      */
     async verifyTransaction(reference, userId) {
-        // 1. Check if already processed
-        const existing = await this.prisma.processedWebhook.findUnique({
-            where: { providerReference: reference },
-        });
-        if (existing) {
-            const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
-            return {
-                status: 'already_processed',
-                message: 'Transaction already processed',
-                newBalance: wallet?.availableBalance.toNumber()
-            };
-        }
         try {
-            // 2. Query Paystack API
-            const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-                headers: { Authorization: `Bearer ${this.PAYSTACK_SECRET}` },
+            // 1. Query Korapay API
+            const response = await axios.get(`${this.KORA_BASE_URL}/charges/${reference}`, { headers: this.koraHeaders() });
+            const data = response.data?.data;
+            if (!data || data.status !== 'success') {
+                throw new BadRequestException(`Transaction status: ${data?.status ?? 'unknown'}`);
+            }
+            // 2. Check if already processed
+            const existing = await this.prisma.processedWebhook.findUnique({
+                where: { providerReference: reference },
             });
-            const data = response.data.data;
-            if (data.status !== 'success') {
-                throw new BadRequestException(`Transaction status: ${data.status}`);
+            if (existing) {
+                const wallet = await this.prisma.wallet.findUnique({ where: { userId } });
+                return {
+                    status: 'already_processed',
+                    message: 'Transaction already processed',
+                    newBalance: wallet?.availableBalance.toNumber(),
+                };
             }
             // 3. Validate Amount and User
-            // Note: Paystack returns amount in kobo/pesewas
-            const amount = data.amount / 100;
-            const txUserId = data.metadata?.userId;
+            const amount = data.amount;
             const currency = data.currency;
+            const txUserId = data.metadata?.userId;
             if (txUserId && txUserId !== userId) {
-                // Security check: Ensure the user verifying is the one who initiated (if metadata allows)
-                // Or simply trust metadata userId. Here we verify logged in user matches metadata.
-                const user = await this.prisma.user.findUnique({ where: { id: userId } });
-                // Note: If admin is verifying, we might skip this. But this is user-initiated.
-                // Strict check:
-                if (txUserId !== userId) {
-                    this.logger.warn(`User ${userId} attempted to verify transaction belonging to ${txUserId}`);
-                    throw new BadRequestException('Transaction does not belong to you');
-                }
+                this.logger.warn(`User ${userId} attempted to verify transaction belonging to ${txUserId}`);
+                throw new BadRequestException('Transaction does not belong to you');
             }
             // 4. Credit Wallet
             this.logger.log(`Verifying deposit: user=${txUserId || userId}, amount=${amount}, currency=${currency}`);
@@ -112,7 +119,7 @@ let PaymentService = PaymentService_1 = class PaymentService {
             await this.prisma.processedWebhook.create({
                 data: {
                     providerReference: reference,
-                    provider: 'PAYSTACK',
+                    provider: 'KORAPAY',
                     status: 'SUCCESS',
                 },
             });
@@ -120,41 +127,48 @@ let PaymentService = PaymentService_1 = class PaymentService {
                 status: 'success',
                 amount,
                 currency,
-                newBalance: wallet.availableBalance.toNumber()
+                newBalance: wallet.availableBalance.toNumber(),
             };
         }
         catch (error) {
             this.logger.error(`Verification error for ${reference}: ${error.response?.data?.message || error.message}`);
-            // If it's a 404 from Paystack, it's invalid
             if (error.response?.status === 404) {
-                throw new BadRequestException('Transaction reference not found');
+                throw new BadRequestException('Transaction not found');
             }
             throw error;
         }
     }
     /**
-     * Handle Paystack Webhook with Idempotency and Security
+     * Verify Korapay Webhook Signature
+     * Korapay signs: HMAC-SHA256(rawBody, secretKey) → hex
      */
-    async handleWebhook(payload, signature) {
-        // 1. Verify Signature
-        const hash = crypto
-            .createHmac('sha512', this.PAYSTACK_SECRET)
-            .update(JSON.stringify(payload))
+    verifyWebhookSignature(rawBody, signature) {
+        const computed = crypto
+            .createHmac('sha256', this.KORA_SECRET)
+            .update(rawBody)
             .digest('hex');
-        if (hash !== signature) {
-            this.logger.warn('Invalid Paystack signature');
+        return computed === signature;
+    }
+    /**
+     * Handle Korapay Webhook
+     */
+    async handleWebhook(payload, rawBody, signature) {
+        // 1. Verify Signature (HMAC-SHA256)
+        if (!this.verifyWebhookSignature(rawBody, signature)) {
+            this.logger.warn('Invalid Korapay webhook signature');
             throw new UnauthorizedException('Invalid signature');
         }
         const event = payload.event;
         const data = payload.data;
-        if (event === 'charge.success') {
+        // Only handle successful charge events
+        if (event === 'charge.success' && data?.status === 'success') {
             const reference = data.reference;
-            const amount = data.amount / 100; // Convert back from pesewas
+            const amount = data.amount;
             const currency = data.currency;
             const userId = data.metadata?.userId;
             if (!userId) {
-                this.logger.error('No userId in webhook metadata');
-                return;
+                this.logger.error('No userId in Korapay webhook metadata');
+                return { status: 'ignored' };
             }
             // 2. Idempotency Check
             const existing = await this.prisma.processedWebhook.findUnique({
@@ -166,13 +180,13 @@ let PaymentService = PaymentService_1 = class PaymentService {
             }
             // 3. Process Deposit
             try {
-                this.logger.log(`Processing deposit: user=${userId}, amount=${amount}, currency=${currency}`);
+                this.logger.log(`Processing deposit via webhook: user=${userId}, amount=${amount}, currency=${currency}`);
                 await this.walletService.deposit(userId, amount, currency);
                 // 4. Record as processed
                 await this.prisma.processedWebhook.create({
                     data: {
                         providerReference: reference,
-                        provider: 'PAYSTACK',
+                        provider: 'KORAPAY',
                         status: 'SUCCESS',
                     },
                 });
@@ -180,111 +194,83 @@ let PaymentService = PaymentService_1 = class PaymentService {
             }
             catch (error) {
                 this.logger.error(`Failed to process deposit for ref ${reference}: ${error.message}`);
-                console.error('WEBHOOK_PROCESS_ERROR:', error);
                 throw error;
             }
+        }
+        else {
+            this.logger.log(`Ignoring Korapay webhook event: ${event}`);
         }
         return { status: 'success' };
     }
     /**
-     * Admin Withdrawal (Transfer API)
+     * Admin Withdrawal (Korapay Disburse / Payout)
      */
     async initiateAdminWithdrawal(amount) {
-        // 1. Get Admin Recipient Code from Config
-        const recipientCode = this.configService.get('PAYSTACK_ADMIN_RECIPIENT_CODE');
-        if (!recipientCode) {
-            this.logger.error('PAYSTACK_ADMIN_RECIPIENT_CODE not configured');
+        const mobileNumber = this.configService.get('KORA_ADMIN_MOBILE_NUMBER');
+        const mobileNetwork = this.configService.get('KORA_ADMIN_MOBILE_NETWORK') || 'MTN';
+        if (!mobileNumber) {
+            this.logger.error('Korapay admin withdrawal not configured (missing KORA_ADMIN_MOBILE_NUMBER)');
             throw new InternalServerErrorException('Admin withdrawal not configured');
         }
-        this.logger.log(`Admin withdrawal of ${amount} GHS triggered to recipient ${recipientCode}`);
-        // 2. Atomic Deduct from System Wallet FIRST
+        this.logger.log(`Admin withdrawal of ${amount} GHS triggered to ${mobileNumber}`);
         try {
             await this.walletService.withdrawSystemFunds(amount);
         }
-        catch (error) {
-            this.logger.error(`System fund deduction failed: ${error.message}`);
-            throw new BadRequestException('Insufficient system funds or wallet error');
+        catch {
+            throw new BadRequestException('Insufficient system funds');
         }
+        const reference = `ADMIN-WITHDRAW-${Date.now()}`;
         try {
-            // 3. Initiate Transfer
-            const transferResponse = await axios.post('https://api.paystack.co/transfer', {
-                source: 'balance',
-                amount: Math.round(amount * 100), // Convert to pesewas
-                recipient: recipientCode,
-                reason: 'Admin Withdrawal',
-            }, {
-                headers: { Authorization: `Bearer ${this.PAYSTACK_SECRET}` },
-            });
-            this.logger.log(`Admin withdrawal successful: ${transferResponse.data.data.reference}`);
-            // Audit Log
-            await this.adminService.logAction('SYSTEM', 'APPROVE_WITHDRAWAL', null, { amount, reference: transferResponse.data.data.reference });
-            return transferResponse.data.data;
+            const disbursementResponse = await axios.post(`${this.KORA_BASE_URL}/transactions/disburse`, {
+                reference,
+                destination: {
+                    type: 'mobile_money',
+                    amount,
+                    currency: 'GHS',
+                    narration: 'Admin Withdrawal',
+                    mobile_money: {
+                        operator: mobileNetwork,
+                        mobile_number: mobileNumber,
+                    },
+                },
+            }, { headers: this.koraHeaders() });
+            this.logger.log(`Admin withdrawal initiated: ref=${reference}`);
+            await this.adminService.logAction('SYSTEM', 'APPROVE_WITHDRAWAL', null, { amount, reference });
+            return disbursementResponse.data?.data;
         }
         catch (error) {
             this.logger.error(`Admin withdrawal failed: ${error.response?.data?.message || error.message}`);
-            // ROLLBACK: Refund System Wallet
-            try {
-                this.logger.warn(`Rolling back system withdrawal of ${amount} GHS...`);
-                await this.walletService.refundSystemWithdrawal(amount, 'Rollback: Paystack transfer failed');
-                this.logger.log('System wallet rollback successful.');
-            }
-            catch (rollbackError) {
-                this.logger.error(`CRITICAL: System wallet rollback failed! Funds may be lost. Error: ${rollbackError.message}`);
-                // In a real system, this would trigger a PagerDuty alert
-            }
-            throw new BadRequestException('Admin withdrawal failed. System funds have been refunded.');
+            // ROLLBACK
+            await this.walletService.refundSystemWithdrawal(amount, 'Rollback: Korapay transfer failed');
+            throw new BadRequestException('Admin withdrawal failed. Refunded.');
         }
     }
     /**
-     * User Withdrawal
+     * User Withdrawal (Korapay Mobile Money Payout)
      */
-    async initiateUserWithdrawal(userId, amount, bankCode, accountNumber) {
-        console.log(`[WITHDRAW] Initiating for user ${userId}, amount ${amount}`);
-        // 1. Deduct from wallet first (Atomic)
+    async initiateUserWithdrawal(userId, amount, mobileNetwork, mobileNumber) {
         await this.walletService.withdraw(userId, amount);
-        console.log(`[WITHDRAW] Wallet deduction successful`);
+        const reference = `WITHDRAW-${userId}-${Date.now()}`;
         try {
-            // Determine type based on bank code
-            const isMoMo = ['MTN', 'VOD', 'ATL'].includes(bankCode.toUpperCase());
-            const type = isMoMo ? 'mobile_money' : 'nuban';
-            console.log(`[WITHDRAW] Creating recipient type: ${type}`);
-            // 2. Create Transfer Recipient
-            const recipientResponse = await axios.post('https://api.paystack.co/transferrecipient', {
-                type,
-                name: 'User Withdrawal',
-                account_number: accountNumber,
-                bank_code: bankCode,
-                currency: 'GHS',
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.PAYSTACK_SECRET}`,
-                    'Content-Type': 'application/json'
+            const disbursementResponse = await axios.post(`${this.KORA_BASE_URL}/transactions/disburse`, {
+                reference,
+                destination: {
+                    type: 'mobile_money',
+                    amount,
+                    currency: 'GHS',
+                    narration: 'Potta Pool Withdrawal',
+                    mobile_money: {
+                        operator: mobileNetwork,
+                        mobile_number: mobileNumber,
+                    },
                 },
-            });
-            const recipientCode = recipientResponse.data.data.recipient_code;
-            console.log(`[WITHDRAW] Recipient created: ${recipientCode}`);
-            // 3. Initiate Transfer
-            const transferResponse = await axios.post('https://api.paystack.co/transfer', {
-                source: 'balance',
-                amount: Math.round(amount * 100),
-                recipient: recipientCode,
-                reason: 'Potta Pool Withdrawal',
-            }, {
-                headers: {
-                    Authorization: `Bearer ${this.PAYSTACK_SECRET}`,
-                    'Content-Type': 'application/json'
-                },
-            });
-            console.log(`[WITHDRAW] Transfer successful: ${transferResponse.data.data.reference}`);
-            return transferResponse.data.data;
+            }, { headers: this.koraHeaders() });
+            return disbursementResponse.data?.data;
         }
         catch (error) {
-            console.error(`[WITHDRAW] ERROR:`, error.response?.data || error.message);
             this.logger.error(`Withdrawal error: ${error.response?.data?.message || error.message}`);
-            // Compensating Transaction: Refund the user
-            this.logger.log(`Refunding user ${userId} amount ${amount} due to failure.`);
             await this.walletService.refundWithdrawal(userId, amount, 'Withdrawal Failed: ' + (error.response?.data?.message || 'Unknown Error'));
-            throw new BadRequestException('Transfer failed. Funds have been refunded.');
+            throw new BadRequestException('Transfer failed. Funds refunded.');
         }
     }
 };
