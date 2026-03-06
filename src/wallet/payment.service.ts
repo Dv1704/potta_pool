@@ -41,14 +41,17 @@ export class PaymentService {
     async initializeDeposit(userId: string, email: string, amount: number, currency: string, callbackUrl?: string) {
         if (amount <= 0) throw new BadRequestException('Amount must be positive');
 
-        // Korapay expects amount in minor units (integer)
-        const minorAmount = Math.round(amount * 100);
+        // Korapay expects amount as an integer. 
+        // For NGN, it's minor units (kobo). 
+        // Based on GHS live testing, it seems they treat it as major units (integer Cedi) for checkout initialization.
+        const koraAmount = currency.toUpperCase() === 'GHS' ? Math.round(amount) : Math.round(amount * 100);
+
         // Shorten reference to fit 50 chars limit (UUID is 36, plus prefix and timestamp makes it too long)
         const reference = `POTTA-${userId.split('-')[0]}-${Date.now()}`;
 
         const payload = {
             reference,
-            amount: minorAmount,
+            amount: koraAmount,
             currency: currency.toUpperCase(),
             redirect_url: callbackUrl,
             notification_url: this.configService.get<string>('KORA_WEBHOOK_URL'),
