@@ -41,27 +41,30 @@ export class PaymentService {
     async initializeDeposit(userId: string, email: string, amount: number, currency: string, callbackUrl?: string) {
         if (amount <= 0) throw new BadRequestException('Amount must be positive');
 
-        this.logger.log(`Initializing deposit: userId=${userId}, amount=${amount}, currency=${currency}`);
-
         // Korapay expects amount in minor units (integer)
         const minorAmount = Math.round(amount * 100);
-        const reference = `POTTA-${userId}-${Date.now()}`;
+        // Shorten reference to fit 50 chars limit (UUID is 36, plus prefix and timestamp makes it too long)
+        const reference = `POTTA-${userId.split('-')[0]}-${Date.now()}`;
+
+        const payload = {
+            reference,
+            amount: minorAmount,
+            currency: currency.toUpperCase(),
+            redirect_url: callbackUrl,
+            notification_url: this.configService.get<string>('KORA_WEBHOOK_URL'),
+            customer: {
+                email,
+                name: email.split('@')[0] || 'Potta User',
+            },
+            metadata: { userId, internalCurrency: currency },
+        };
+
+        this.logger.log(`Initializing Korapay deposit for user ${userId}: ${JSON.stringify(payload)}`);
 
         try {
             const response = await axios.post(
                 `${this.KORA_BASE_URL}/charges/initialize`,
-                {
-                    reference,
-                    amount: minorAmount,
-                    currency: currency.toUpperCase(),
-                    redirect_url: callbackUrl,
-                    notification_url: this.configService.get<string>('KORA_WEBHOOK_URL'),
-                    customer: {
-                        email,
-                        name: email.split('@')[0],
-                    },
-                    metadata: { userId, internalCurrency: currency },
-                },
+                payload,
                 { headers: this.koraHeaders() },
             );
 
@@ -74,7 +77,9 @@ export class PaymentService {
                 reference,
             };
         } catch (error: any) {
-            this.logger.error(`Korapay init error: ${error.response?.data?.message || error.message}`);
+            const errorMsg = error.response?.data?.message || error.message;
+            const errorData = JSON.stringify(error.response?.data || {});
+            this.logger.error(`Korapay init error: ${errorMsg} - Data: ${errorData}`);
             throw new BadRequestException('Failed to initialize payment');
         }
     }
