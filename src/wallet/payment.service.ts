@@ -43,6 +43,8 @@ export class PaymentService {
 
         this.logger.log(`Initializing deposit: userId=${userId}, amount=${amount}, currency=${currency}`);
 
+        // Korapay expects amount in minor units (integer)
+        const minorAmount = Math.round(amount * 100);
         const reference = `POTTA-${userId}-${Date.now()}`;
 
         try {
@@ -50,7 +52,7 @@ export class PaymentService {
                 `${this.KORA_BASE_URL}/charges/initialize`,
                 {
                     reference,
-                    amount,
+                    amount: minorAmount,
                     currency: currency.toUpperCase(),
                     redirect_url: callbackUrl,
                     notification_url: this.configService.get<string>('KORA_WEBHOOK_URL'),
