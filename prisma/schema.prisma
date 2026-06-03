@@ -25,6 +25,27 @@ model User {
   emailVerified    Boolean  @default(false)
   phoneNumber      String?
   isTwoFactorEnabled Boolean @default(false)
+  influencerGames    Game[]   @relation("GameInfluencer")
+  influencerPayouts  InfluencerEarning[] @relation("InfluencerPayouts")
+  lastLoginIp        String?
+  registrationIp     String?
+  creatorTier        String   @default("BRONZE") // BRONZE, SILVER, GOLD, ELITE
+  isVerified         Boolean  @default(false)
+  customBranding     String?  // JSON string
+  fraudAlerts        FraudAlert[] @relation("UserFraudAlerts")
+}
+
+model FraudAlert {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation("UserFraudAlerts", fields: [userId], references: [id], onDelete: Cascade)
+  type        String   // SELF_PLAY, REFERRAL_ABUSE, SAME_IP_PLAY, SUSPICIOUS_REFERRAL, COMMISSION_FARMING
+  severity    String   // LOW, MEDIUM, HIGH, CRITICAL
+  description String
+  details     String   // JSON string of findings
+  status      String   @default("OPEN") // OPEN, RESOLVED, DISMISSED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Wallet {
@@ -77,6 +98,9 @@ model Game {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   version    Int       @default(0)
+  influencerId String?
+  influencer   User?     @relation("GameInfluencer", fields: [influencerId], references: [id])
+  influencerEarning InfluencerEarning?
 }
 
 model AdminAuditLog {
@@ -85,5 +109,16 @@ model AdminAuditLog {
   action       String   // BAN, APPROVE_WITHDRAWAL, OVERRIDE_BALANCE
   targetUserId String?
   details      String?  // JSON string or description
+  createdAt    DateTime @default(now())
+}
+
+model InfluencerEarning {
+  id           String   @id @default(uuid())
+  influencerId String
+  influencer   User     @relation("InfluencerPayouts", fields: [influencerId], references: [id])
+  matchId      String   @unique
+  game         Game     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  platformFee  Decimal  @db.Decimal(18, 4)
+  amount       Decimal  @db.Decimal(18, 4)
   createdAt    DateTime @default(now())
 }

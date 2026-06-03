@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WalletService } from '../../wallet/wallet.service.js';
 import { BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { FraudService } from '../../fraud/fraud.service.js';
 
 @WebSocketGateway({
     cors: {
@@ -38,6 +39,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         private gameService: GameService,
         private walletService: WalletService,
         private prisma: PrismaService,
+        private fraudService: FraudService,
     ) {
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
@@ -50,8 +52,16 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }, 5000);
     }
 
-    handleConnection(client: Socket) {
+    async handleConnection(client: Socket) {
         console.log(`Client connected: ${client.id}`);
+        const userId = client.handshake.query.userId as string;
+        if (userId) {
+            const ip = client.handshake.headers['x-forwarded-for'] || client.handshake.address;
+            const ipStr = Array.isArray(ip) ? ip[0] : ip;
+            if (typeof ipStr === 'string') {
+                await this.fraudService.trackUserConnection(userId, ipStr);
+            }
+        }
     }
 
     handleDisconnect(client: Socket) {
@@ -91,6 +101,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 console.log(`[JoinQueue] Match found for ${data.userId}! Creating game...`);
                 const gameId = uuidv4();
                 const playerIds = match.map((p: any) => p.userId);
+
+                // Run matchmaking fraud check
+                const clientIps: Record<string, string> = {};
+                for (const p of match) {
+                    const socket = this.server.sockets.sockets.get(p.socketId);
+                    if (socket) {
+                        const ip = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+                        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+                        if (typeof ipStr === 'string') {
+                            clientIps[p.userId] = ipStr;
+                        }
+                    }
+                }
+                await this.fraudService.checkMatchmakingFraud(playerIds, clientIps);
 
                 try {
                     await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);

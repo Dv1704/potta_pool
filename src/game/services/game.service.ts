@@ -6,13 +6,15 @@ import { WalletService } from '../../wallet/wallet.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Redis } from 'ioredis';
 import { Inject } from '@nestjs/common';
+import { FraudService } from '../../fraud/fraud.service.js';
 
 @Injectable()
 export class GameService implements OnModuleInit {
     constructor(
         private walletService: WalletService,
         private prisma: PrismaService,
-        @Inject('REDIS_CLIENT') private readonly redis: Redis
+        @Inject('REDIS_CLIENT') private readonly redis: Redis,
+        private fraudService: FraudService,
     ) { }
 
     async onModuleInit() {
@@ -88,8 +90,23 @@ export class GameService implements OnModuleInit {
 
         try {
             console.log(`[CreateGame] Creating DB entry...`);
+
+            // Determine if any player was referred by an influencer and attach influencerId
+            const playersUsers = await this.prisma.user.findMany({
+                where: { id: { in: players } },
+                include: { referredBy: true }
+            });
+
+            let influencerId: string | null = null;
+            for (const u of playersUsers) {
+                if (u.referredBy && u.referredBy.role === 'INFLUENCER') {
+                    influencerId = u.referredBy.id;
+                    break; // attach first influencer found
+                }
+            }
+
             await this.prisma.game.create({
-                data: { id: gameId, mode, stake, players, status: 'ACTIVE' }
+                data: { id: gameId, mode, stake, players, status: 'ACTIVE', influencerId: influencerId || null }
             });
             console.log(`[CreateGame] DB entry created.`);
 
@@ -147,22 +164,33 @@ export class GameService implements OnModuleInit {
 
         const winnerId = game.mode.getWinner();
 
-        // 1. ATOMIC STATUS CHANGE (Locking the win on DB level)
-        const updateResult = await this.prisma.game.updateMany({
-            where: { id: gameId, status: 'ACTIVE' },
-            data: { status: 'COMPLETED', winnerId: winnerId || null }
-        });
-
-        if (updateResult.count === 0) {
-            // Another server node already ended this game
-            await this.redis.del(this.getGameKey(gameId));
-            return;
-        }
-
         if (winnerId) {
             const totalPot = game.stake * 2;
             const loserIds = game.players.filter(id => id !== winnerId);
-            await this.walletService.processPayout(gameId, winnerId, loserIds, totalPot);
+            
+            if (totalPot > 0) {
+                // Atomic game completion + payout inside processPayout transaction
+                await this.walletService.processPayout(gameId, winnerId, loserIds, totalPot);
+            } else {
+                // Atomic status change for zero-stake games
+                await this.prisma.game.updateMany({
+                    where: { id: gameId, status: 'ACTIVE' },
+                    data: { status: 'COMPLETED', winnerId }
+                });
+            }
+        } else {
+            // No winner - update status directly
+            await this.prisma.game.updateMany({
+                where: { id: gameId, status: 'ACTIVE' },
+                data: { status: 'COMPLETED', winnerId: null }
+            });
+        }
+
+        // Run game payout fraud check
+        try {
+            await this.fraudService.checkGamePayoutFraud(gameId);
+        } catch (err) {
+            // Suppress errors to avoid blocking the core game resolution
         }
 
         await this.redis.del(this.getGameKey(gameId));

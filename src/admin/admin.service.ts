@@ -72,13 +72,78 @@ export class AdminService {
         });
         const transactionVolume = Math.abs(Number(volumeData._sum.amount || 0));
 
-        // 3. Active Sessions (users who've logged in in the last 24 hours - we'll use updatedAt as proxy)
+        // 3. Active Sessions (users who've logged in in the last 24 hours)
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const activeSessions = await this.prisma.user.count({
             where: { updatedAt: { gte: oneDayAgo } }
         });
 
-        // 4. Recent Transactions (last 5)
+        // 4. System Revenue (sum of PLATFORM_FEE ledgers)
+        const systemRevenueData = await this.prisma.ledger.aggregate({
+            where: { type: 'PLATFORM_FEE' },
+            _sum: { amount: true }
+        });
+        const totalSystemRevenue = Number(systemRevenueData._sum.amount || 0);
+
+        // 5. Creator Payouts (sum of INFLUENCER_COMMISSION ledgers)
+        const creatorPayoutsData = await this.prisma.ledger.aggregate({
+            where: { type: 'INFLUENCER_COMMISSION' },
+            _sum: { amount: true }
+        });
+        const totalCreatorPayouts = Number(creatorPayoutsData._sum.amount || 0);
+
+        // 6. Active Rooms (ACTIVE games)
+        const activeRooms = await this.prisma.game.count({
+            where: { status: 'ACTIVE' }
+        });
+
+        // 7. Open Fraud Alerts
+        const openFraudAlertsCount = await this.prisma.fraudAlert.count({
+            where: { status: 'OPEN' }
+        });
+
+        // 8. User Retention / Stickiness
+        const now = new Date();
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+        const dau = activeSessions;
+        const wau = await this.prisma.user.count({
+            where: { updatedAt: { gte: sevenDaysAgo } }
+        });
+        const mau = await this.prisma.user.count({
+            where: { updatedAt: { gte: thirtyDaysAgo } }
+        });
+        const stickiness = mau > 0 ? Math.round((dau / mau) * 100) : 0;
+
+        // 9. Top Performing Creators
+        const influencers = await this.prisma.user.findMany({
+            where: { role: 'INFLUENCER' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                creatorTier: true,
+                isVerified: true,
+                referrals: { select: { id: true } },
+                influencerPayouts: { select: { amount: true } }
+            }
+        });
+
+        const topCreators = influencers.map(inf => {
+            const totalEarned = inf.influencerPayouts.reduce((sum, p) => sum + Number(p.amount), 0);
+            return {
+                id: inf.id,
+                name: inf.name || inf.email.split('@')[0],
+                email: inf.email,
+                tier: inf.creatorTier,
+                isVerified: inf.isVerified,
+                referralsCount: inf.referrals.length,
+                totalEarnings: totalEarned
+            };
+        }).sort((a, b) => b.totalEarnings - a.totalEarnings).slice(0, 10);
+
+        // 10. Recent Transactions (last 5)
         const recentTransactions = await this.prisma.ledger.findMany({
             take: 5,
             orderBy: { createdAt: 'desc' },
@@ -91,7 +156,7 @@ export class AdminService {
             }
         });
 
-        // 5. Top Users by Balance
+        // 11. Top Users by Balance
         const topWallets = await this.prisma.wallet.findMany({
             take: 4,
             orderBy: { availableBalance: 'desc' },
@@ -118,7 +183,7 @@ export class AdminService {
             };
         }));
 
-        // 6. Platform Balance (sum of all wallet balances)
+        // 12. Platform Balance (sum of all wallet balances)
         const platformBalanceData = await this.prisma.wallet.aggregate({
             _sum: {
                 availableBalance: true,
@@ -127,7 +192,7 @@ export class AdminService {
         });
         const platformBalance = Number(platformBalanceData._sum.availableBalance || 0) + Number(platformBalanceData._sum.lockedBalance || 0);
 
-        // 7. Monthly Summary
+        // 13. Monthly Summary
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
@@ -156,7 +221,11 @@ export class AdminService {
                 totalUsers,
                 totalWallets,
                 transactionVolume,
-                activeSessions
+                activeSessions,
+                totalSystemRevenue,
+                totalCreatorPayouts,
+                activeRooms,
+                openFraudAlertsCount
             },
             recentTransactions: recentTransactions.map(tx => ({
                 id: tx.id,
@@ -172,7 +241,14 @@ export class AdminService {
                 totalDeposits,
                 totalWithdrawals,
                 netGrowth: totalDeposits - totalWithdrawals
-            }
+            },
+            retentionMetrics: {
+                dau,
+                wau,
+                mau,
+                stickiness
+            },
+            topCreators
         };
     }
 }

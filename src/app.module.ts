@@ -10,6 +10,7 @@ import { WalletModule } from './wallet/wallet.module.js';
 import { GameModule } from './game/game.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { FraudModule } from './fraud/fraud.module.js';
 
 @Module({
     imports: [
@@ -26,6 +27,7 @@ import { AdminModule } from './admin/admin.module.js';
         GameModule,
         RedisModule,
         AdminModule,
+        FraudModule,
     ],
     controllers: [],
     providers: [

@@ -200,6 +200,28 @@ export class WalletService {
         const tid = crypto.randomUUID();
 
         return await this.prisma.$transaction(async (tx) => {
+            // Fetch game to determine influencer (if any) and check status
+            const game = await tx.game.findUnique({ where: { id: matchId } });
+            if (!game) {
+                throw new NotFoundException(`Game not found for matchId ${matchId}`);
+            }
+
+            // IDEMPOTENCY CHECK
+            if (game.status === 'COMPLETED') {
+                return { winnerWinnings: 0, commission: 0, alreadyProcessed: true };
+            }
+
+            // Update game status and winner atomically
+            await tx.game.update({
+                where: { id: matchId },
+                data: {
+                    status: 'COMPLETED',
+                    winnerId,
+                },
+            });
+
+            const influencerId = game?.influencerId || null;
+
             // Unlock losers
             for (const loserId of loserIds) {
                 await tx.wallet.update({
@@ -223,37 +245,128 @@ export class WalletService {
 
             const systemWallet = await this.getSystemWallet(tx);
 
-            // Commission to System
-            await tx.wallet.update({
-                where: { id: systemWallet.id },
-                data: {
-                    availableBalance: { increment: commission },
-                    version: { increment: 1 },
-                },
-            });
+            if (influencerId) {
+                // Fetch influencer's tier dynamically
+                const influencer = await tx.user.findUnique({
+                    where: { id: influencerId },
+                    select: { creatorTier: true }
+                });
 
-            await tx.ledger.createMany({
-                data: [
-                    {
-                        transactionId: tid,
-                        walletId: winnerWallet.id,
-                        amount: winnerWinnings,
-                        type: 'PAYOUT',
-                        referenceId: matchId,
-                        description: `Won ${winnerWinnings} GHS in match ${matchId} `,
+                let shareRate = 0.20; // Default Bronze
+                if (influencer) {
+                    if (influencer.creatorTier === 'SILVER') shareRate = 0.25;
+                    else if (influencer.creatorTier === 'GOLD') shareRate = 0.30;
+                    else if (influencer.creatorTier === 'ELITE') shareRate = 0.40;
+                }
+
+                // Calculate influencer share
+                const influencerShare = commission.mul(new Prisma.Decimal(shareRate));
+                const systemShare = commission.sub(influencerShare);
+
+                // Credit influencer wallet (create if missing)
+                let infWallet = await tx.wallet.findUnique({ where: { userId: influencerId } });
+                let infWalletId: string;
+                if (!infWallet) {
+                    const created = await tx.wallet.create({ data: { userId: influencerId, availableBalance: influencerShare } });
+                    infWalletId = created.id;
+                    infWallet = created;
+                } else {
+                    await tx.wallet.update({ where: { id: infWallet.id }, data: { availableBalance: { increment: influencerShare }, version: { increment: 1 } } });
+                    infWalletId = infWallet.id;
+                }
+
+                // Credit system wallet with remaining platform fee
+                await tx.wallet.update({
+                    where: { id: systemWallet.id },
+                    data: {
+                        availableBalance: { increment: systemShare },
+                        version: { increment: 1 },
                     },
-                    {
-                        transactionId: tid,
-                        walletId: systemWallet.id,
-                        amount: commission,
-                        type: 'COMMISSION',
-                        referenceId: matchId,
-                        description: `Commission ${commission} GHS from match ${matchId} `,
-                    }
-                ]
-            });
+                });
 
-            return { winnerWinnings: winnerWinnings.toNumber(), commission: commission.toNumber() };
+                // Record InfluencerEarning
+                await tx.influencerEarning.create({
+                    data: {
+                        influencerId: influencerId,
+                        matchId: matchId,
+                        platformFee: commission,
+                        amount: influencerShare,
+                    }
+                });
+
+                // Ledgers: winner, influencer, system
+                await tx.ledger.createMany({
+                    data: [
+                        {
+                            transactionId: tid,
+                            walletId: winnerWallet.id,
+                            amount: winnerWinnings,
+                            type: 'PAYOUT',
+                            referenceId: matchId,
+                            description: `Reward ${winnerWinnings} GHS in match ${matchId}`,
+                        },
+                        {
+                            transactionId: tid,
+                            walletId: infWalletId,
+                            amount: influencerShare,
+                            type: 'INFLUENCER_COMMISSION',
+                            referenceId: matchId,
+                            description: `Influencer commission ${influencerShare} GHS for match ${matchId}`,
+                        },
+                        {
+                            transactionId: tid,
+                            walletId: systemWallet.id,
+                            amount: systemShare,
+                            type: 'PLATFORM_FEE',
+                            referenceId: matchId,
+                            description: `Platform Fee ${systemShare} GHS from match ${matchId}`,
+                        }
+                    ].map(d => {
+                        // Prisma createMany requires all records to have defined keys; remove undefined walletId if necessary
+                        if (d.walletId === undefined) {
+                            // Map to a record that points to system wallet instead (fallback)
+                            return {
+                                ...d,
+                                walletId: systemWallet.id
+                            };
+                        }
+                        return d;
+                    })
+                });
+
+            } else {
+                // No influencer: credit full platform fee to system
+                await tx.wallet.update({
+                    where: { id: systemWallet.id },
+                    data: {
+                        availableBalance: { increment: commission },
+                        version: { increment: 1 },
+                    },
+                });
+
+                await tx.ledger.createMany({
+                    data: [
+                        {
+                            transactionId: tid,
+                            walletId: winnerWallet.id,
+                            amount: winnerWinnings,
+                            type: 'PAYOUT',
+                            referenceId: matchId,
+                            description: `Reward ${winnerWinnings} GHS in match ${matchId}`,
+                        },
+                        {
+                            transactionId: tid,
+                            walletId: systemWallet.id,
+                            amount: commission,
+                            type: 'PLATFORM_FEE',
+                            referenceId: matchId,
+                            description: `Platform Fee ${commission} GHS from match ${matchId}`,
+                        }
+                    ]
+                });
+            }
+
+            return { winnerWinnings: winnerWinnings.toNumber(), commission: commission.toNumber(), alreadyProcessed: false };
         });
     }
 

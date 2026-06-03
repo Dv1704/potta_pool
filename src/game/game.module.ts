@@ -5,10 +5,11 @@ import { GameGateway } from './gateway/game.gateway.js';
 import { GameController } from './controllers/game.controller.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
+import { FraudModule } from '../fraud/fraud.module.js';
 import { GameCleanupService } from './services/game-cleanup.service.js';
 
 @Module({
-    imports: [WalletModule, PrismaModule],
+    imports: [WalletModule, PrismaModule, FraudModule],
     controllers: [GameController],
     providers: [MatchmakingService, GameService, GameGateway, GameCleanupService],
     exports: [GameService],

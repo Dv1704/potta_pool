@@ -13,20 +13,24 @@ export class AuthController {
     @ApiOperation({ summary: 'Register a new user' })
     @ApiResponse({ status: 201, description: 'User successfully registered' })
     @ApiResponse({ status: 409, description: 'Email already exists' })
-    async register(@Body() registerDto: RegisterDto) {
-        return this.authService.register(registerDto);
+    async register(@Body() registerDto: RegisterDto, @Request() req: any) {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+        return this.authService.register(registerDto, ipStr);
     }
 
     @Post('login')
     @ApiOperation({ summary: 'Login user' })
     @ApiResponse({ status: 200, description: 'Login successful, returns JWT token' })
     @ApiResponse({ status: 401, description: 'Invalid credentials or account suspended' })
-    async login(@Body() loginDto: LoginDto) {
+    async login(@Body() loginDto: LoginDto, @Request() req: any) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        return this.authService.login(user);
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+        return this.authService.login(user, ipStr);
     }
 
     @UseGuards(JwtAuthGuard)

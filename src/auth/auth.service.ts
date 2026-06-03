@@ -26,14 +26,24 @@ export class AuthService {
         return null;
     }
 
-    async login(user: any) {
+    async login(user: any, ip?: string) {
+        if (ip) {
+            try {
+                await this.usersService.update({
+                    where: { id: user.id },
+                    data: { lastLoginIp: ip }
+                });
+            } catch (err) {
+                // Ignore IP update failure to not block login
+            }
+        }
         const payload: JwtPayload = { email: user.email, sub: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
         };
     }
 
-    async register(registerDto: RegisterDto) {
+    async register(registerDto: RegisterDto, ip?: string) {
         const existingUser = await this.usersService.findOne(registerDto.email);
         if (existingUser) {
             throw new ConflictException('Email already exists');
@@ -67,7 +77,18 @@ export class AuthService {
             referredBy: referredById ? { connect: { id: referredById } } : undefined,
             role: 'USER', // Default role
             wallet: { create: {} }, // Initialize wallet
+            registrationIp: ip,
+            lastLoginIp: ip
         });
+
+        // Trigger creator tier evaluation for referrer
+        if (referredById) {
+            try {
+                await this.usersService.updateCreatorTierIfNeeded(referredById);
+            } catch (err) {
+                // Ignore scaling errors to prevent breaking signup flow
+            }
+        }
 
         const { password, ...result } = user;
         return result;
