@@ -55,32 +55,32 @@ export const HOLE_CENTER_POS = [
 
 export const POOL_HOLE_RADIUS = 30;
 export const DIST_BALL_HOLE = 66;
-export const BALL_DIAMETER = 34;
+export const BALL_DIAMETER = 28;
 export const BALL_DIAMETER_QUADRO = Math.pow(BALL_DIAMETER, 2);
 export const BALL_RADIUS = BALL_DIAMETER / 2;
 export const BALL_RADIUS_QUADRO = Math.pow(BALL_RADIUS, 2);
 
-export const CUE_BALL_POS = { x: 400, y: 360 };
+export const CUE_BALL_POS = { x: 357, y: 356 };
 export const CUE_BALL_RESPOT_1 = { x: 109, y: 102 };
 export const CUE_BALL_RESPOT_3 = { x: 1168, y: 616 };
 
 export const STARTING_RACK_POS: Record<number, { x: number; y: number }[]> = {
     [GAME_MODE_EIGHT]: [
-        { x: 850, y: 360 },
-        { x: 879.5, y: 343 },
-        { x: 879.5, y: 377 },
-        { x: 909, y: 326 },
-        { x: 909, y: 360 }, // BALL 8
-        { x: 909, y: 394 },
-        { x: 938.5, y: 309 },
-        { x: 938.5, y: 343 },
-        { x: 938.5, y: 377 },
-        { x: 938.5, y: 411 },
-        { x: 968, y: 292 },
-        { x: 968, y: 326 },
-        { x: 968, y: 360 },
-        { x: 968, y: 394 },
-        { x: 968, y: 428 },
+        { x: 916, y: 356 },
+        { x: 941, y: 370 },
+        { x: 941, y: 342 },
+        { x: 966, y: 384 },
+        { x: 966, y: 356 }, // BALL 8
+        { x: 966, y: 328 },
+        { x: 991, y: 398 },
+        { x: 991, y: 370 },
+        { x: 991, y: 342 },
+        { x: 991, y: 314 },
+        { x: 1016, y: 412 },
+        { x: 1016, y: 384 },
+        { x: 1016, y: 356 },
+        { x: 1016, y: 328 },
+        { x: 1016, y: 300 },
     ],
     [GAME_MODE_NINE]: [
         { x: 916, y: 356 },
@@ -122,12 +122,12 @@ export const RECT_COLLISION = {
 export const MAX_SPIN_VALUE = 50;
 export const K_IMPACT_BALL = 0.97;
 export const K_FRICTION = 0.985;
-export const K_MIN_FORCE = 0.1; // Increased for server speed
+export const K_MIN_FORCE = 0.016;
 export const MAX_POWER_SHOT = 200;
 export const MIN_POWER_SHOT = 10;
 export const MAX_POWER_FORCE_BALL = 40;
 
-export const MAX_BACK_SPIN_CUE_FORCE = 12;
+export const MAX_BACK_SPIN_CUE_FORCE = 3;
 
 export const MAIN_TABLE_EDGE = [1, 5, 9, 13, 17, 21];
 

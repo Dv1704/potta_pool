@@ -49,9 +49,9 @@ export class PoolEngine {
         this._physics.resetEvents();
         const fRad = (angle * Math.PI) / 180;
         const force = new Vector2(Math.cos(fRad), Math.sin(fRad));
-        // Match frontend scaling if needed, but for now let's just cap it
+        // Match frontend scaling
         const cappedPower = Math.min(power, Constants.MAX_POWER_SHOT || 200);
-        force.scalarProduct(cappedPower);
+        force.scalarProduct(cappedPower * 0.2);
         cueBall.addForce(force);
         cueBall.setSideEffect(sideSpin);
         const pocketedBalls = [];

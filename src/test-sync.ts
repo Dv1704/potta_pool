@@ -108,6 +108,13 @@ async function testSocket() {
 
     await matchFoundPromise;
 
+    // Emit playerReady for both players to start the game
+    socket1.emit('playerReady', { gameId, userId: user1Id });
+    socket2.emit('playerReady', { gameId, userId: user2Id });
+
+    // Wait a brief moment for the game state to initialize
+    await new Promise(r => setTimeout(r, 500));
+
     // Determine who is shooting based on the server's turn
     const shooterSocket = (socket1 as any).isMyTurn ? socket1 : socket2;
     const observerSocket = (socket1 as any).isMyTurn ? socket2 : socket1;
@@ -130,9 +137,13 @@ async function testSocket() {
     });
     await errorPromise;
 
+    // Wait 1.1s to bypass server input throttling (1000ms limit)
+    await new Promise(r => setTimeout(r, 1100));
+
     console.log(`🔫 Player ${shooterSocket === socket1 ? '1' : '2'} taking CORRECT shot...`);
 
     // 5. TEST SHOT SYNC
+    let nextTurnId = '';
     const shotRelayPromise = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject('Shot sync timeout'), 20000);
 
@@ -144,6 +155,7 @@ async function testSocket() {
             console.log('🎯 Opponent received shotResult from:', data.shooterId);
             if (data.shooterId === shooterId) {
                 console.log('🎉 SYNC VERIFIED!');
+                nextTurnId = data.gameState.turn;
                 clearTimeout(timeout);
                 resolve();
             }
@@ -166,6 +178,9 @@ async function testSocket() {
 
     await shotRelayPromise;
 
+    // Wait 1.1s to bypass server input throttling (1000ms limit)
+    await new Promise(r => setTimeout(r, 1100));
+
     console.log('🔄 Checking turn flip in Redis...');
     const gameData = await redis.get(`game:active:${gameId}`);
     if (gameData) {
@@ -173,23 +188,31 @@ async function testSocket() {
         console.log(`Next turn is for: ${state.data.turn}`);
     }
 
-    // 6. SECOND SHOT (By the other player)
-    console.log(`🔫 Player ${observerSocket === socket1 ? '1' : '2'} taking SECOND shot...`);
+    // 6. SECOND SHOT (By the player whose turn it actually is)
+    const nextShooterSocket = nextTurnId === user1Id ? socket1 : socket2;
+    const nextObserverSocket = nextTurnId === user1Id ? socket2 : socket1;
+    const nextShooterId = nextTurnId;
+
+    console.log(`🔫 Player ${nextShooterSocket === socket1 ? '1' : '2'} taking SECOND shot...`);
     const secondShotPromise = new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => reject('Second shot timeout'), 20000);
-        shooterSocket.on('opponentShotStart', (data: any) => {
-            console.log('👀 Original shooter received opponentShotStart for 2nd shot');
+        nextObserverSocket.on('opponentShotStart', (data: any) => {
+            console.log('👀 Observer received opponentShotStart for 2nd shot');
         });
-        shooterSocket.on('shotResult', (data: any) => {
-            console.log('🎯 Original shooter received shotResult for 2nd shot');
+        nextObserverSocket.on('shotResult', (data: any) => {
+            console.log('🎯 Observer received shotResult for 2nd shot');
             clearTimeout(timeout);
             resolve();
         });
+        nextShooterSocket.on('error', (err: any) => {
+            console.error('❌ Second shooter received error:', err.message);
+            reject('Second shooter error: ' + err.message);
+        });
     });
 
-    observerSocket.emit('takeShot', {
+    nextShooterSocket.emit('takeShot', {
         gameId,
-        userId: observerSocket === socket1 ? user1Id : user2Id,
+        userId: nextShooterId,
         angle: 90,
         power: 30,
         sideSpin: 0,
