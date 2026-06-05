@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
@@ -11,10 +12,17 @@ import { GameModule } from './game/game.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { FraudModule } from './fraud/fraud.module.js';
+import { MetricsController } from './metrics.controller.js';
 
 @Module({
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
+        PrometheusModule.register({
+            path: '/prometheus-metrics',
+            defaultMetrics: {
+                enabled: true,
+            },
+        }),
         ScheduleModule.forRoot(),
         ThrottlerModule.forRoot([{
             ttl: 60000, // 60 seconds
@@ -29,7 +37,7 @@ import { FraudModule } from './fraud/fraud.module.js';
         AdminModule,
         FraudModule,
     ],
-    controllers: [],
+    controllers: [MetricsController],
     providers: [
         {
             provide: APP_GUARD,

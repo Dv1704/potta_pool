@@ -29,14 +29,6 @@ let PaymentController = class PaymentController {
         return this.paymentService.verifyTransaction(reference, req.user.id);
     }
     /**
-     * Korapay Webhook - Public
-     * Korapay sends HMAC-SHA256(rawBody, secret_key) in the 'x-korapay-signature' header
-     */
-    async handleKorapayWebhook(req, payload, signature) {
-        const rawBody = req.rawBody?.toString() ?? JSON.stringify(payload);
-        return this.paymentService.handleWebhook(payload, rawBody, signature);
-    }
-    /**
      * Paystack Webhook - Public
      * Paystack sends HMAC-SHA512(rawBody, secret_key) in the 'x-paystack-signature' header
      */
@@ -59,7 +51,7 @@ __decorate([
     UseGuards(JwtAuthGuard),
     ApiBearerAuth('JWT-auth'),
     Post('deposit/initialize'),
-    ApiOperation({ summary: 'Initialize a Korapay checkout deposit' }),
+    ApiOperation({ summary: 'Initialize a Paystack checkout deposit' }),
     __param(0, Request()),
     __param(1, Body()),
     __metadata("design:type", Function),
@@ -70,24 +62,13 @@ __decorate([
     UseGuards(JwtAuthGuard),
     ApiBearerAuth('JWT-auth'),
     Get('verify/:reference'),
-    ApiOperation({ summary: 'Verify a Korapay transaction manually by reference' }),
+    ApiOperation({ summary: 'Verify a Paystack transaction manually by reference' }),
     __param(0, Request()),
     __param(1, Param('reference')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "verifyTransaction", null);
-__decorate([
-    HttpCode(200),
-    Post('webhook/korapay'),
-    ApiOperation({ summary: 'Korapay Webhook' }),
-    __param(0, Req()),
-    __param(1, Body()),
-    __param(2, Headers('x-korapay-signature')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, String]),
-    __metadata("design:returntype", Promise)
-], PaymentController.prototype, "handleKorapayWebhook", null);
 __decorate([
     HttpCode(200),
     Post('webhook/paystack'),

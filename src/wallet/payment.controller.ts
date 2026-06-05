@@ -14,7 +14,7 @@ export class PaymentController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
     @Post('deposit/initialize')
-    @ApiOperation({ summary: 'Initialize a Korapay checkout deposit' })
+    @ApiOperation({ summary: 'Initialize a Paystack checkout deposit' })
     async initializeDeposit(@Request() req: any, @Body() dto: InitiateDepositDto) {
         return this.paymentService.initializeDeposit(req.user.id, dto.email, dto.amount, dto.currency, dto.callbackUrl);
     }
@@ -22,25 +22,9 @@ export class PaymentController {
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
     @Get('verify/:reference')
-    @ApiOperation({ summary: 'Verify a Korapay transaction manually by reference' })
+    @ApiOperation({ summary: 'Verify a Paystack transaction manually by reference' })
     async verifyTransaction(@Request() req: any, @Param('reference') reference: string) {
         return this.paymentService.verifyTransaction(reference, req.user.id);
-    }
-
-    /**
-     * Korapay Webhook - Public
-     * Korapay sends HMAC-SHA256(rawBody, secret_key) in the 'x-korapay-signature' header
-     */
-    @HttpCode(200)
-    @Post('webhook/korapay')
-    @ApiOperation({ summary: 'Korapay Webhook' })
-    async handleKorapayWebhook(
-        @Req() req: RawBodyRequest<Request>,
-        @Body() payload: any,
-        @Headers('x-korapay-signature') signature: string,
-    ) {
-        const rawBody = req.rawBody?.toString() ?? JSON.stringify(payload);
-        return this.paymentService.handleWebhook(payload, rawBody, signature);
     }
 
     /**

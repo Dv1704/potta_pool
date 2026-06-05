@@ -31,10 +31,6 @@ let PaymentService = PaymentService_1 = class PaymentService {
     PAYSTACK_SECRET;
     PAYSTACK_PUBLIC;
     PAYSTACK_WEBHOOK_URL;
-    KORA_SECRET;
-    KORA_PUBLIC;
-    KORA_WEBHOOK_HASH;
-    KORA_BASE_URL = 'https://api.korapay.com/merchant/api/v1';
     withdrawalCodes = new Map();
     constructor(prisma, configService, walletService, fxService, adminService, emailService) {
         this.prisma = prisma;
@@ -48,16 +44,6 @@ let PaymentService = PaymentService_1 = class PaymentService {
         this.PAYSTACK_SECRET = this.configService.get('PAYSTACK_SECRET_KEY') || 'secretKey';
         this.PAYSTACK_PUBLIC = this.configService.get('PAYSTACK_PUBLIC_KEY') || 'publicKey';
         this.PAYSTACK_WEBHOOK_URL = this.configService.get('PAYSTACK_WEBHOOK_URL') || 'webhookUrl';
-        // Keep Korapay config for legacy/rollback capability
-        this.KORA_SECRET = this.configService.get('KORA_SECRET_KEY') || 'secretKey';
-        this.KORA_PUBLIC = this.configService.get('KORA_PUBLIC_KEY') || 'publicKey';
-        this.KORA_WEBHOOK_HASH = this.configService.get('KORA_WEBHOOK_HASH') || 'webhookSecret';
-    }
-    koraHeaders() {
-        return {
-            Authorization: `Bearer ${this.KORA_SECRET}`,
-            'Content-Type': 'application/json',
-        };
     }
     /**
      * Initialize a Paystack Checkout transaction
@@ -218,64 +204,6 @@ let PaymentService = PaymentService_1 = class PaymentService {
         return { status: 'success' };
     }
     /**
-     * Verify Korapay Webhook Signature (Legacy)
-     */
-    verifyWebhookSignature(rawBody, signature) {
-        const computed = crypto
-            .createHmac('sha256', this.KORA_SECRET)
-            .update(rawBody)
-            .digest('hex');
-        return computed === signature;
-    }
-    /**
-     * Handle Korapay Webhook (Legacy)
-     */
-    async handleWebhook(payload, rawBody, signature) {
-        if (!this.verifyWebhookSignature(rawBody, signature)) {
-            this.logger.warn('Invalid Korapay webhook signature');
-            throw new UnauthorizedException('Invalid signature');
-        }
-        const event = payload.event;
-        const data = payload.data;
-        if (event === 'charge.success' && data?.status === 'success') {
-            const reference = data.reference;
-            const amount = data.amount;
-            const currency = data.currency;
-            const userId = data.metadata?.userId;
-            if (!userId) {
-                this.logger.error('No userId in Korapay webhook metadata');
-                return { status: 'ignored' };
-            }
-            const existing = await this.prisma.processedWebhook.findUnique({
-                where: { providerReference: reference },
-            });
-            if (existing) {
-                this.logger.log(`Webhook ${reference} already processed. Skipping.`);
-                return { status: 'already_processed' };
-            }
-            try {
-                this.logger.log(`Processing deposit via webhook: user=${userId}, amount=${amount}, currency=${currency}`);
-                await this.walletService.deposit(userId, amount, currency);
-                await this.prisma.processedWebhook.create({
-                    data: {
-                        providerReference: reference,
-                        provider: 'KORAPAY',
-                        status: 'SUCCESS',
-                    },
-                });
-                this.logger.log(`Successfully processed deposit for user ${userId}, ref: ${reference}`);
-            }
-            catch (error) {
-                this.logger.error(`Failed to process deposit for ref ${reference}: ${error.message}`);
-                throw error;
-            }
-        }
-        else {
-            this.logger.log(`Ignoring Korapay webhook event: ${event}`);
-        }
-        return { status: 'success' };
-    }
-    /**
      * Create Paystack Transfer Recipient
      */
     async createPaystackRecipient(name, mobileNumber, mobileNetwork, currency = 'GHS') {
@@ -318,8 +246,8 @@ let PaymentService = PaymentService_1 = class PaymentService {
      * Admin Withdrawal (Paystack Transfer)
      */
     async initiateAdminWithdrawal(amount) {
-        const mobileNumber = this.configService.get('KORA_ADMIN_MOBILE_NUMBER') || this.configService.get('PAYSTACK_ADMIN_MOBILE_NUMBER');
-        const mobileNetwork = this.configService.get('KORA_ADMIN_MOBILE_NETWORK') || this.configService.get('PAYSTACK_ADMIN_MOBILE_NETWORK') || 'MTN';
+        const mobileNumber = this.configService.get('PAYSTACK_ADMIN_MOBILE_NUMBER');
+        const mobileNetwork = this.configService.get('PAYSTACK_ADMIN_MOBILE_NETWORK') || 'MTN';
         if (!mobileNumber) {
             this.logger.error('Admin withdrawal not configured');
             throw new InternalServerErrorException('Admin withdrawal not configured');

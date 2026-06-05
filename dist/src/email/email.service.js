@@ -164,7 +164,7 @@ let EmailService = class EmailService {
                 <div style="margin: 30px 0;">
                     <div style="background-color: #1f2937; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 15px;">
                         <strong style="color: #ffffff; font-size: 16px; display: block; margin-bottom: 4px;">💳 Fund Your Wallet</strong>
-                        <span style="color: #9ca3af; font-size: 14px;">Instantly deposit funds using Paystack or Korapay secure gateways and start playing.</span>
+                        <span style="color: #9ca3af; font-size: 14px;">Instantly deposit funds using Paystack secure gateway and start playing.</span>
                     </div>
                     <div style="background-color: #1f2937; border-left: 4px solid #a855f7; padding: 16px; border-radius: 0 8px 8px 0; margin-bottom: 15px;">
                         <strong style="color: #ffffff; font-size: 16px; display: block; margin-bottom: 4px;">🎱 Challenger Matches</strong>
