@@ -11,10 +11,10 @@ import { FraudService } from '../../fraud/fraud.service.js';
 @Injectable()
 export class GameService implements OnModuleInit {
     constructor(
-        private walletService: WalletService,
-        private prisma: PrismaService,
+        @Inject(WalletService) private walletService: WalletService,
+        @Inject(PrismaService) private prisma: PrismaService,
         @Inject('REDIS_CLIENT') private readonly redis: Redis,
-        private fraudService: FraudService,
+        @Inject(FraudService) private fraudService: FraudService,
     ) { }
 
     async onModuleInit() {
@@ -139,15 +139,20 @@ export class GameService implements OnModuleInit {
         if (!game) throw new Error('Game not found');
 
         const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin);
+        const gameState = game.mode.getGameState();
+        const isFinished = game.mode.isFinished();
+        const winner = game.mode.getWinner();
 
-        if (game.mode.isFinished()) {
+        if (isFinished) {
+            await this.saveGame(gameId, game);
             await this.endGame(gameId);
         } else {
             await this.saveGame(gameId, game);
         }
 
-        return result;
+        return { result, gameState, isFinished, winner };
     }
+
 
     async startGame(gameId: string) {
         const game = await this.loadGame(gameId);
@@ -211,6 +216,7 @@ export class GameService implements OnModuleInit {
             if (game) {
                 game.mode.updateStatus();
                 if (game.mode.isFinished()) {
+                    await this.saveGame(gameId, game);
                     await this.endGame(gameId);
                     timedOutGames.push(gameId);
                 } else {

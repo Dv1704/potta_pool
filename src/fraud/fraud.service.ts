@@ -1,11 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 
 @Injectable()
 export class FraudService {
     private readonly logger = new Logger(FraudService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(@Inject(PrismaService) private prisma: PrismaService) {}
 
     async trackUserConnection(userId: string, ip: string) {
         if (!ip || ip.includes('127.0.0.1') || ip === '::1') return; // Skip local loopback in dev if needed, or track it

@@ -59,3 +59,15 @@ __decorate([
     ApiProperty({ example: 1000 }),
     __metadata("design:type", Number)
 ], AdminWithdrawalDto.prototype, "amount", void 0);
+export class ConfirmWithdrawalDto {
+    sessionId;
+    code;
+}
+__decorate([
+    ApiProperty({ example: 'some-uuid-session-id' }),
+    __metadata("design:type", String)
+], ConfirmWithdrawalDto.prototype, "sessionId", void 0);
+__decorate([
+    ApiProperty({ example: '123456' }),
+    __metadata("design:type", String)
+], ConfirmWithdrawalDto.prototype, "code", void 0);

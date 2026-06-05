@@ -3,7 +3,7 @@ import { PaymentService } from './payment.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
-import { InitiateDepositDto, InitiateWithdrawalDto, AdminWithdrawalDto } from './dto/payment.dto.js';
+import { InitiateDepositDto, InitiateWithdrawalDto, AdminWithdrawalDto, ConfirmWithdrawalDto } from './dto/payment.dto.js';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Payments')
@@ -43,6 +43,23 @@ export class PaymentController {
         return this.paymentService.handleWebhook(payload, rawBody, signature);
     }
 
+    /**
+     * Paystack Webhook - Public
+     * Paystack sends HMAC-SHA512(rawBody, secret_key) in the 'x-paystack-signature' header
+     */
+    @HttpCode(200)
+    @Post('webhook/paystack')
+    @ApiOperation({ summary: 'Paystack Webhook' })
+    async handlePaystackWebhook(
+        @Req() req: RawBodyRequest<Request>,
+        @Body() payload: any,
+        @Headers('x-paystack-signature') signature: string,
+    ) {
+        const rawBody = req.rawBody?.toString() ?? JSON.stringify(payload);
+        return this.paymentService.handlePaystackWebhook(payload, rawBody, signature);
+    }
+
+
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
     @Post('withdraw')
@@ -53,6 +70,18 @@ export class PaymentController {
             dto.amount,
             dto.bankCode,       // reusing bankCode field for mobileNetwork (e.g. "MTN", "VODAFONE")
             dto.accountNumber,  // reusing accountNumber field for mobileNumber
+        );
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @Post('withdraw/confirm')
+    @ApiOperation({ summary: 'Confirm a mobile money withdrawal using 2FA' })
+    async confirmWithdraw(@Request() req: any, @Body() dto: ConfirmWithdrawalDto) {
+        return this.paymentService.confirmUserWithdrawal(
+            req.user.id,
+            dto.sessionId,
+            dto.code
         );
     }
 

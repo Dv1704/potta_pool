@@ -18,24 +18,10 @@ let MatchmakingService = class MatchmakingService {
         this.redis = redis;
     }
     getBracket(stake) {
-        // Wider brackets for better matching: 10-20, 20-100, 100+
-        if (stake < 10)
-            return '1-10';
-        if (stake < 20)
-            return '10-20';
-        if (stake < 100)
-            return '20-100';
-        return '100+';
+        return stake.toString();
     }
     getAdjacentBrackets(bracket) {
-        // Return adjacent brackets for flexible matching
-        const bracketMap = {
-            '1-10': ['10-20'],
-            '10-20': ['1-10', '20-100'],
-            '20-100': ['10-20', '100+'],
-            '100+': ['20-100']
-        };
-        return bracketMap[bracket] || [];
+        return [];
     }
     getQueueKey(mode, bracket) {
         return `matchmaking:queue:${mode}:${bracket}`;

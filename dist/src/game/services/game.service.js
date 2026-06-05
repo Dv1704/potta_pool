@@ -17,14 +17,17 @@ import { WalletService } from '../../wallet/wallet.service.js';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { Redis } from 'ioredis';
 import { Inject } from '@nestjs/common';
+import { FraudService } from '../../fraud/fraud.service.js';
 let GameService = class GameService {
     walletService;
     prisma;
     redis;
-    constructor(walletService, prisma, redis) {
+    fraudService;
+    constructor(walletService, prisma, redis, fraudService) {
         this.walletService = walletService;
         this.prisma = prisma;
         this.redis = redis;
+        this.fraudService = fraudService;
     }
     async onModuleInit() {
         await this.recoverCrashedGames();
@@ -88,8 +91,20 @@ let GameService = class GameService {
         console.log(`[CreateGame] Starting creation for game ${gameId} with players ${players.join(', ')}`);
         try {
             console.log(`[CreateGame] Creating DB entry...`);
+            // Determine if any player was referred by an influencer and attach influencerId
+            const playersUsers = await this.prisma.user.findMany({
+                where: { id: { in: players } },
+                include: { referredBy: true }
+            });
+            let influencerId = null;
+            for (const u of playersUsers) {
+                if (u.referredBy && u.referredBy.role === 'INFLUENCER') {
+                    influencerId = u.referredBy.id;
+                    break; // attach first influencer found
+                }
+            }
             await this.prisma.game.create({
-                data: { id: gameId, mode, stake, players, status: 'ACTIVE' }
+                data: { id: gameId, mode, stake, players, status: 'ACTIVE', influencerId: influencerId || null }
             });
             console.log(`[CreateGame] DB entry created.`);
             let gameMode;
@@ -119,13 +134,17 @@ let GameService = class GameService {
         if (!game)
             throw new Error('Game not found');
         const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin);
-        if (game.mode.isFinished()) {
+        const gameState = game.mode.getGameState();
+        const isFinished = game.mode.isFinished();
+        const winner = game.mode.getWinner();
+        if (isFinished) {
+            await this.saveGame(gameId, game);
             await this.endGame(gameId);
         }
         else {
             await this.saveGame(gameId, game);
         }
-        return result;
+        return { result, gameState, isFinished, winner };
     }
     async startGame(gameId) {
         const game = await this.loadGame(gameId);
@@ -140,20 +159,34 @@ let GameService = class GameService {
         if (!game)
             return;
         const winnerId = game.mode.getWinner();
-        // 1. ATOMIC STATUS CHANGE (Locking the win on DB level)
-        const updateResult = await this.prisma.game.updateMany({
-            where: { id: gameId, status: 'ACTIVE' },
-            data: { status: 'COMPLETED', winnerId: winnerId || null }
-        });
-        if (updateResult.count === 0) {
-            // Another server node already ended this game
-            await this.redis.del(this.getGameKey(gameId));
-            return;
-        }
         if (winnerId) {
             const totalPot = game.stake * 2;
             const loserIds = game.players.filter(id => id !== winnerId);
-            await this.walletService.processPayout(gameId, winnerId, loserIds, totalPot);
+            if (totalPot > 0) {
+                // Atomic game completion + payout inside processPayout transaction
+                await this.walletService.processPayout(gameId, winnerId, loserIds, totalPot);
+            }
+            else {
+                // Atomic status change for zero-stake games
+                await this.prisma.game.updateMany({
+                    where: { id: gameId, status: 'ACTIVE' },
+                    data: { status: 'COMPLETED', winnerId }
+                });
+            }
+        }
+        else {
+            // No winner - update status directly
+            await this.prisma.game.updateMany({
+                where: { id: gameId, status: 'ACTIVE' },
+                data: { status: 'COMPLETED', winnerId: null }
+            });
+        }
+        // Run game payout fraud check
+        try {
+            await this.fraudService.checkGamePayoutFraud(gameId);
+        }
+        catch (err) {
+            // Suppress errors to avoid blocking the core game resolution
         }
         await this.redis.del(this.getGameKey(gameId));
     }
@@ -171,6 +204,7 @@ let GameService = class GameService {
             if (game) {
                 game.mode.updateStatus();
                 if (game.mode.isFinished()) {
+                    await this.saveGame(gameId, game);
                     await this.endGame(gameId);
                     timedOutGames.push(gameId);
                 }
@@ -192,9 +226,13 @@ let GameService = class GameService {
 };
 GameService = __decorate([
     Injectable(),
+    __param(0, Inject(WalletService)),
+    __param(1, Inject(PrismaService)),
     __param(2, Inject('REDIS_CLIENT')),
+    __param(3, Inject(FraudService)),
     __metadata("design:paramtypes", [WalletService,
         PrismaService,
-        Redis])
+        Redis,
+        FraudService])
 ], GameService);
 export { GameService };

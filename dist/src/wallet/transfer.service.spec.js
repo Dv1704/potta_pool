@@ -2,7 +2,9 @@
 import { Test } from '@nestjs/testing';
 import { TransferService } from './transfer.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { Transfer2FAService } from './transfer-2fa.service';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 describe('TransferService Security Tests', () => {
     let service;
     let prisma;
@@ -17,6 +19,14 @@ describe('TransferService Security Tests', () => {
                         user: { findFirst: jest.fn() },
                         wallet: { updateMany: jest.fn(), update: jest.fn(), findUnique: jest.fn() },
                         ledger: { createMany: jest.fn() }
+                    }
+                },
+                {
+                    provide: Transfer2FAService,
+                    useValue: {
+                        requiresConfirmation: jest.fn().mockResolvedValue(false),
+                        generateAndSendCode: jest.fn(),
+                        verifyCode: jest.fn()
                     }
                 }
             ]
@@ -74,7 +84,7 @@ describe('TransferService Security Tests', () => {
             const mockSenderWallet = {
                 id: 'wallet-1',
                 userId: 'sender-id',
-                availableBalance: 500
+                availableBalance: new Prisma.Decimal(500)
             };
             const updateManySpy = jest.fn().mockResolvedValue({ count: 1 });
             jest.spyOn(prisma, '$transaction').mockImplementation(async (callback) => {
@@ -125,7 +135,7 @@ describe('TransferService Security Tests', () => {
             const mockSenderWallet = {
                 id: 'wallet-1',
                 userId: 'sender-id',
-                availableBalance: 500
+                availableBalance: new Prisma.Decimal(500)
             };
             const createManySpy = jest.fn();
             jest.spyOn(prisma, '$transaction').mockImplementation(async (callback) => {

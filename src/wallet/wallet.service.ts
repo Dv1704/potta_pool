@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, BadRequestException, NotFoundException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { FXService } from './fx.service.js';
 import * as crypto from 'crypto';
@@ -9,8 +9,8 @@ const SYSTEM_EMAIL = 'system@pottagame.com';
 @Injectable()
 export class WalletService {
     constructor(
-        private prisma: PrismaService,
-        private fxService: FXService,
+        @Inject(PrismaService) private prisma: PrismaService,
+        @Inject(FXService) private fxService: FXService,
     ) { }
 
     private async getSystemWallet(tx: any) {

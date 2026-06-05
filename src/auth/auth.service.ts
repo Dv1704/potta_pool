@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ConflictException, Logger, Inject } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -8,10 +8,12 @@ import { EmailService } from '../email/email.service.js';
 
 @Injectable()
 export class AuthService {
+    private readonly logger = new Logger(AuthService.name);
+
     constructor(
-        private usersService: UsersService,
-        private jwtService: JwtService,
-        private emailService: EmailService,
+        @Inject(UsersService) private usersService: UsersService,
+        @Inject(JwtService) private jwtService: JwtService,
+        @Inject(EmailService) private emailService: EmailService,
     ) { }
 
     async validateUser(email: string, pass: string): Promise<any> {
@@ -89,6 +91,11 @@ export class AuthService {
                 // Ignore scaling errors to prevent breaking signup flow
             }
         }
+
+        // Send welcome email (asynchronous, non-blocking)
+        this.emailService.sendWelcomeEmail(user.email, user.name || 'Potta User').catch(err => {
+            this.logger.error(`Failed to send welcome email to ${user.email}: ${err.message}`);
+        });
 
         const { password, ...result } = user;
         return result;

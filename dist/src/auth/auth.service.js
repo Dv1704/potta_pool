@@ -7,15 +7,20 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var AuthService_1;
+import { Injectable, UnauthorizedException, ConflictException, Logger, Inject } from '@nestjs/common';
 import { UsersService } from '../users/users.service.js';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { EmailService } from '../email/email.service.js';
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     usersService;
     jwtService;
     emailService;
+    logger = new Logger(AuthService_1.name);
     constructor(usersService, jwtService, emailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
@@ -32,13 +37,24 @@ let AuthService = class AuthService {
         }
         return null;
     }
-    async login(user) {
+    async login(user, ip) {
+        if (ip) {
+            try {
+                await this.usersService.update({
+                    where: { id: user.id },
+                    data: { lastLoginIp: ip }
+                });
+            }
+            catch (err) {
+                // Ignore IP update failure to not block login
+            }
+        }
         const payload = { email: user.email, sub: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
         };
     }
-    async register(registerDto) {
+    async register(registerDto, ip) {
         const existingUser = await this.usersService.findOne(registerDto.email);
         if (existingUser) {
             throw new ConflictException('Email already exists');
@@ -69,6 +85,21 @@ let AuthService = class AuthService {
             referredBy: referredById ? { connect: { id: referredById } } : undefined,
             role: 'USER', // Default role
             wallet: { create: {} }, // Initialize wallet
+            registrationIp: ip,
+            lastLoginIp: ip
+        });
+        // Trigger creator tier evaluation for referrer
+        if (referredById) {
+            try {
+                await this.usersService.updateCreatorTierIfNeeded(referredById);
+            }
+            catch (err) {
+                // Ignore scaling errors to prevent breaking signup flow
+            }
+        }
+        // Send welcome email (asynchronous, non-blocking)
+        this.emailService.sendWelcomeEmail(user.email, user.name || 'Potta User').catch(err => {
+            this.logger.error(`Failed to send welcome email to ${user.email}: ${err.message}`);
         });
         const { password, ...result } = user;
         return result;
@@ -121,8 +152,11 @@ let AuthService = class AuthService {
         return { message: 'Password successfully reset' };
     }
 };
-AuthService = __decorate([
+AuthService = AuthService_1 = __decorate([
     Injectable(),
+    __param(0, Inject(UsersService)),
+    __param(1, Inject(JwtService)),
+    __param(2, Inject(EmailService)),
     __metadata("design:paramtypes", [UsersService,
         JwtService,
         EmailService])

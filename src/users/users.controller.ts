@@ -24,10 +24,29 @@ export class UsersController {
 
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
-    @Post('verify-email') // Simulation endpoint
+    @Post('verify-email') // Simulation endpoint (legacy)
     @ApiOperation({ summary: 'Toggle email verification status' })
     async toggleEmail(@Request() req: any, @Body('status') status: boolean) {
         return this.usersService.toggleEmailVerification(req.user.id, status);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @Post('verify-email/send')
+    @ApiOperation({ summary: 'Send verification code to user email' })
+    async sendVerification(@Request() req: any) {
+        return this.usersService.generateAndSendVerificationCode(req.user.id, req.user.email);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @Post('verify-email/confirm')
+    @ApiOperation({ summary: 'Confirm email verification code' })
+    async confirmVerification(@Request() req: any, @Body() body: { sessionId: string; code: string }) {
+        if (!body.sessionId || !body.code) {
+            throw new BadRequestException('Session ID and code are required');
+        }
+        return this.usersService.verifyEmailCode(req.user.id, body.sessionId, body.code);
     }
 
     @UseGuards(JwtAuthGuard)

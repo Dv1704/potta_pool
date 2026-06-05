@@ -7,9 +7,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service.js';
 let JwtStrategy = class JwtStrategy extends PassportStrategy(Strategy) {
@@ -37,6 +40,8 @@ let JwtStrategy = class JwtStrategy extends PassportStrategy(Strategy) {
 };
 JwtStrategy = __decorate([
     Injectable(),
+    __param(0, Inject(ConfigService)),
+    __param(1, Inject(UsersService)),
     __metadata("design:paramtypes", [ConfigService,
         UsersService])
 ], JwtStrategy);

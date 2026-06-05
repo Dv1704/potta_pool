@@ -1,10 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { User, Prisma } from '@prisma/client';
+import { EmailService } from '../email/email.service.js';
+import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class UsersService {
-    constructor(private prisma: PrismaService) { }
+    private verificationCodes = new Map<string, { code: string; email: string; expiresAt: Date }>();
+
+    constructor(
+        @Inject(PrismaService) private prisma: PrismaService,
+        @Inject(EmailService) private emailService: EmailService,
+        @Inject(ConfigService) private configService: ConfigService,
+    ) {
+        // Run cleanup every 5 minutes
+        setInterval(() => this.cleanExpiredVerificationCodes(), 5 * 60 * 1000);
+    }
 
     async create(data: Prisma.UserCreateInput): Promise<User> {
         return this.prisma.user.create({
@@ -185,5 +197,52 @@ export class UsersService {
             isVerified: userDetails?.isVerified || false,
             customBranding: userDetails?.customBranding ? JSON.parse(userDetails.customBranding) : null
         };
+    }
+
+    private cleanExpiredVerificationCodes() {
+        const now = new Date();
+        for (const [sessionId, data] of this.verificationCodes.entries()) {
+            if (now > data.expiresAt) {
+                this.verificationCodes.delete(sessionId);
+            }
+        }
+    }
+
+    async generateAndSendVerificationCode(userId: string, email: string): Promise<{ sessionId: string }> {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const sessionId = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
+        this.verificationCodes.set(sessionId, { code, email, expiresAt });
+
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true }
+        });
+
+        const name = user?.name || 'Potta User';
+
+        await this.emailService.sendVerificationCodeEmail(email, name, code);
+
+        return { sessionId };
+    }
+
+    async verifyEmailCode(userId: string, sessionId: string, code: string): Promise<User> {
+        const session = this.verificationCodes.get(sessionId);
+        if (!session) {
+            throw new BadRequestException('Invalid or expired verification session');
+        }
+        if (new Date() > session.expiresAt) {
+            this.verificationCodes.delete(sessionId);
+            throw new BadRequestException('Verification code has expired');
+        }
+        if (session.code !== code) {
+            throw new BadRequestException('Invalid verification code');
+        }
+
+        this.verificationCodes.delete(sessionId);
+
+        // Update database
+        return this.toggleEmailVerification(userId, true);
     }
 }

@@ -9,11 +9,12 @@ import { AdminService } from './admin.service.js';
 import { AdminController } from './admin.controller.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { WalletModule } from '../wallet/wallet.module.js';
+import { UsersModule } from '../users/users.module.js';
 let AdminModule = class AdminModule {
 };
 AdminModule = __decorate([
     Module({
-        imports: [forwardRef(() => WalletModule)],
+        imports: [forwardRef(() => WalletModule), UsersModule],
         controllers: [AdminController],
         providers: [AdminService, PrismaService],
         exports: [AdminService]

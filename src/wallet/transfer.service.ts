@@ -184,7 +184,7 @@ export class TransferService {
                     name: recipient.name || 'Player'
                 },
                 amount,
-                newBalance: senderWalletData.availableBalance.minus(transferAmount).toNumber()
+                newBalance: senderWalletData.availableBalance.sub(transferAmount).toNumber()
             };
         });
     }

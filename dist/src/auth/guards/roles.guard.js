@@ -15,13 +15,18 @@ let RolesGuard = class RolesGuard {
         this.reflector = reflector;
     }
     canActivate(context) {
-        const roles = this.reflector.get('roles', context.getHandler());
+        const roles = this.reflector.getAllAndOverride('roles', [
+            context.getHandler(),
+            context.getClass(),
+        ]);
         if (!roles) {
             return true;
         }
         const request = context.switchToHttp().getRequest();
         const user = request.user;
-        return roles.some((role) => user.role === role);
+        // Handle case-insensitive comparisons to prevent issues
+        const userRole = user?.role?.toUpperCase();
+        return roles.some((role) => userRole === role.toUpperCase());
     }
 };
 RolesGuard = __decorate([

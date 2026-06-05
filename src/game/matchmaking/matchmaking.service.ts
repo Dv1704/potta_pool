@@ -13,22 +13,11 @@ export class MatchmakingService {
     constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis) { }
 
     private getBracket(stake: number): string {
-        // Wider brackets for better matching: 10-20, 20-100, 100+
-        if (stake < 10) return '1-10';
-        if (stake < 20) return '10-20';
-        if (stake < 100) return '20-100';
-        return '100+';
+        return stake.toString();
     }
 
     private getAdjacentBrackets(bracket: string): string[] {
-        // Return adjacent brackets for flexible matching
-        const bracketMap: { [key: string]: string[] } = {
-            '1-10': ['10-20'],
-            '10-20': ['1-10', '20-100'],
-            '20-100': ['10-20', '100+'],
-            '100+': ['20-100']
-        };
-        return bracketMap[bracket] || [];
+        return [];
     }
 
     private getQueueKey(mode: string, bracket: string): string {

@@ -10,16 +10,19 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
 import { AdminService } from './admin.service.js';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { UsersService } from '../users/users.service.js';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
 let AdminController = class AdminController {
     adminService;
-    constructor(adminService) {
+    usersService;
+    constructor(adminService, usersService) {
         this.adminService = adminService;
+        this.usersService = usersService;
     }
     async reconcile(req) {
         return this.adminService.reconcile();
@@ -27,11 +30,13 @@ let AdminController = class AdminController {
     async getDashboard() {
         return this.adminService.getDashboardStats();
     }
+    async overrideTier(id, body) {
+        const brandingStr = body.customBranding ? JSON.stringify(body.customBranding) : undefined;
+        return this.usersService.overrideCreatorTier(id, body.tier, body.isVerified, brandingStr);
+    }
 };
 __decorate([
     Get('reconcile'),
-    UseGuards(JwtAuthGuard, RolesGuard),
-    Roles('ADMIN'),
     __param(0, Request()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
@@ -39,16 +44,26 @@ __decorate([
 ], AdminController.prototype, "reconcile", null);
 __decorate([
     Get('dashboard'),
-    UseGuards(JwtAuthGuard, RolesGuard),
-    Roles('ADMIN'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getDashboard", null);
+__decorate([
+    Patch('users/:id/tier'),
+    ApiOperation({ summary: 'Override creator tier and verified status (Admin only)' }),
+    __param(0, Param('id')),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "overrideTier", null);
 AdminController = __decorate([
     Controller('admin'),
     ApiTags('Admin'),
     ApiBearerAuth('JWT-auth'),
-    __metadata("design:paramtypes", [AdminService])
+    UseGuards(JwtAuthGuard, RolesGuard),
+    Roles('ADMIN'),
+    __metadata("design:paramtypes", [AdminService,
+        UsersService])
 ], AdminController);
 export { AdminController };

@@ -32,3 +32,11 @@ export class AdminWithdrawalDto {
     @ApiProperty({ example: 1000 })
     amount!: number;
 }
+
+export class ConfirmWithdrawalDto {
+    @ApiProperty({ example: 'some-uuid-session-id' })
+    sessionId!: string;
+
+    @ApiProperty({ example: '123456' })
+    code!: string;
+}

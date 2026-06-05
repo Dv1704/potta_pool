@@ -16,6 +16,8 @@ import { FXService } from './fx.service.js';
 import { TransferService } from './transfer.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../auth/guards/roles.guard.js';
+import { Roles } from '../auth/guards/roles.decorator.js';
 import { Throttle } from '@nestjs/throttler';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { BalanceResponseDto } from './dto/wallet.dto.js';
@@ -109,7 +111,10 @@ __decorate([
 ], WalletController.prototype, "confirmTransfer", null);
 __decorate([
     Post('debug/inject-balance'),
-    ApiOperation({ summary: 'TEMPORARY: Inject balance for testing' }),
+    UseGuards(JwtAuthGuard, RolesGuard),
+    Roles('ADMIN'),
+    ApiBearerAuth('JWT-auth'),
+    ApiOperation({ summary: 'ADMIN ONLY: Inject balance for testing — REMOVE IN PRODUCTION' }),
     __param(0, Body()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),

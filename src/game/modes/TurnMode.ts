@@ -162,6 +162,7 @@ export class TurnMode extends GameMode {
     serialize(): any {
         return {
             turnIndex: this.currentTurnIndex,
+            turnExpiration: this.turnExpiration,
             isGameOver: this.isGameOver,
             isGameStarted: this.isGameStarted,
             winner: this.winner,
@@ -174,6 +175,7 @@ export class TurnMode extends GameMode {
 
     hydrate(state: any): void {
         this.currentTurnIndex = state.turnIndex;
+        this.turnExpiration = state.turnExpiration || 0;
         this.isGameOver = state.isGameOver;
         this.isGameStarted = state.isGameStarted;
         this.winner = state.winner;

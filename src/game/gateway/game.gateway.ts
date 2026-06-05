@@ -12,7 +12,7 @@ import { MatchmakingService } from '../matchmaking/matchmaking.service.js';
 import { GameService } from '../services/game.service.js';
 import { v4 as uuidv4 } from 'uuid';
 import { WalletService } from '../../wallet/wallet.service.js';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Inject } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { FraudService } from '../../fraud/fraud.service.js';
 
@@ -35,11 +35,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readyPlayers: Map<string, Set<string>> = new Map();
 
     constructor(
-        private matchmakingService: MatchmakingService,
-        private gameService: GameService,
-        private walletService: WalletService,
-        private prisma: PrismaService,
-        private fraudService: FraudService,
+        @Inject(MatchmakingService) private matchmakingService: MatchmakingService,
+        @Inject(GameService) private gameService: GameService,
+        @Inject(WalletService) private walletService: WalletService,
+        @Inject(PrismaService) private prisma: PrismaService,
+        @Inject(FraudService) private fraudService: FraudService,
     ) {
         // Periodic check for timeouts (every 5 seconds)
         setInterval(async () => {
@@ -190,8 +190,26 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
             // 2. SERVER CALCULATION (The "Truth")
             // This runs the authoritative physics engine
+            const gameBeforeShot = await this.gameService.getGame(data.gameId);
+            if (!gameBeforeShot) {
+                throw new Error('Game not found');
+            }
+            const { players: playerIds, stake } = gameBeforeShot;
+
+            // Enrich with player names
+            const players = await Promise.all(playerIds.map(async (pId) => {
+                const user = await this.prisma.user.findUnique({
+                    where: { id: pId },
+                    select: { id: true, name: true, email: true }
+                });
+                return {
+                    id: pId,
+                    name: user?.name || user?.email?.split('@')[0] || 'Player'
+                };
+            }));
+
             process.stdout.write(`[TakeShot] Starting simulation for ${data.gameId}...\n`);
-            const result = await this.gameService.handleShot(
+            const shotInfo = await this.gameService.handleShot(
                 data.gameId,
                 data.userId,
                 data.angle,
@@ -201,35 +219,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             );
             process.stdout.write(`[TakeShot] Simulation complete for ${data.gameId}.\n`);
 
+            const { result, gameState, isFinished, winner } = shotInfo;
 
             // 3. BROADCAST RESULT (The "Correction")
             // Send the final resting positions to everyone for verification
-            const game = await this.gameService.getGame(data.gameId);
-            if (game) {
-                // Enrich with player names
-                const players = await Promise.all(game.players.map(async (pId) => {
-                    const user = await this.prisma.user.findUnique({
-                        where: { id: pId },
-                        select: { id: true, name: true, email: true }
-                    });
-                    return {
-                        id: pId,
-                        name: user?.name || user?.email?.split('@')[0] || 'Player'
-                    };
-                }));
+            this.server.to(data.gameId).emit('shotResult', {
+                shooterId: data.userId,
+                shotResult: result,
+                gameState: {
+                    ...gameState,
+                    players,
+                    stake: stake,
+                    betAmount: stake
+                }
+            });
 
-                const state = game.mode.getGameState();
-                this.server.to(data.gameId).emit('shotResult', {
-                    shooterId: data.userId,
-                    shotResult: result,
-                    gameState: {
-                        ...state,
-                        players,
-                        stake: game.stake,
-                        betAmount: game.stake
-                    }
-                });
+            if (isFinished) {
+                const winnerUser = players.find(p => p.id === winner);
+                const winnerName = winnerUser ? winnerUser.name : 'Unknown';
+                // Wait 12 seconds for the client to complete the shot/roll animation before redirecting
+                setTimeout(() => {
+                    this.server.to(data.gameId).emit('gameEnded', {
+                        message: `Game over! Winner: ${winnerName}`,
+                        winnerId: winner
+                    });
+                }, 12000);
             }
+
         } catch (error: any) {
             console.error(`[TakeShot] Error from user ${data.userId}: ${error.message}`);
             client.emit('error', { message: error.message });

@@ -43,19 +43,25 @@ export class Transfer2FAService {
 
         if (!user) throw new BadRequestException('User not found');
 
+        // Find recipient in database to get their display name
+        const recipient = await this.prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: recipientIdentifier },
+                    { name: recipientIdentifier }
+                ]
+            },
+            select: { name: true, email: true }
+        });
+        const resolvedRecipientName = recipient ? `${recipient.name || ''} (${recipient.email || ''})`.trim() : recipientIdentifier;
+
         // Send email
-        await this.emailService.sendEmail(
+        await this.emailService.sendTransfer2faEmail(
             user.email,
-            'Transfer Confirmation Code',
-            `
-            <h2>Transfer Confirmation Required</h2>
-            <p>Hi ${user.name || 'there'},</p>
-            <p>You are attempting to transfer <strong>${amount} GHS</strong> to <strong>${recipientIdentifier}</strong>.</p>
-            <p>Your confirmation code is:</p>
-            <h1 style="color: #4CAF50; font-size: 32px; letter-spacing: 5px;">${code}</h1>
-            <p>This code expires in ${this.CODE_EXPIRY_MINUTES} minutes.</p>
-            <p>If you did not request this transfer, please ignore this email and secure your account.</p>
-            `
+            user.name || 'Potta User',
+            amount,
+            resolvedRecipientName,
+            code
         );
 
         return { sessionId };

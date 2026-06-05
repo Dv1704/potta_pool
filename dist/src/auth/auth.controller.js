@@ -20,15 +20,19 @@ let AuthController = class AuthController {
     constructor(authService) {
         this.authService = authService;
     }
-    async register(registerDto) {
-        return this.authService.register(registerDto);
+    async register(registerDto, req) {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+        return this.authService.register(registerDto, ipStr);
     }
-    async login(loginDto) {
+    async login(loginDto, req) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
-        return this.authService.login(user);
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+        return this.authService.login(user, ipStr);
     }
     async logout(req) {
         return { message: 'Logged out successfully' };
@@ -49,8 +53,9 @@ __decorate([
     ApiResponse({ status: 201, description: 'User successfully registered' }),
     ApiResponse({ status: 409, description: 'Email already exists' }),
     __param(0, Body()),
+    __param(1, Request()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [RegisterDto]),
+    __metadata("design:paramtypes", [RegisterDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
 __decorate([
@@ -59,8 +64,9 @@ __decorate([
     ApiResponse({ status: 200, description: 'Login successful, returns JWT token' }),
     ApiResponse({ status: 401, description: 'Invalid credentials or account suspended' }),
     __param(0, Body()),
+    __param(1, Request()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [LoginDto]),
+    __metadata("design:paramtypes", [LoginDto, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "login", null);
 __decorate([

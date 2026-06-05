@@ -3,6 +3,7 @@ describe('TurnMode', () => {
     let turnMode;
     beforeEach(() => {
         turnMode = new TurnMode(['player1', 'player2']);
+        turnMode.startGame();
     });
     it('should switch turn on no-hit foul', () => {
         // Shot with 0 power -> No hit

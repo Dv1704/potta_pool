@@ -15,7 +15,7 @@ import { PaymentService } from './payment.service.js';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../auth/guards/roles.guard.js';
 import { Roles } from '../auth/guards/roles.decorator.js';
-import { InitiateDepositDto, InitiateWithdrawalDto, AdminWithdrawalDto } from './dto/payment.dto.js';
+import { InitiateDepositDto, InitiateWithdrawalDto, AdminWithdrawalDto, ConfirmWithdrawalDto } from './dto/payment.dto.js';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 let PaymentController = class PaymentController {
     paymentService;
@@ -36,9 +36,20 @@ let PaymentController = class PaymentController {
         const rawBody = req.rawBody?.toString() ?? JSON.stringify(payload);
         return this.paymentService.handleWebhook(payload, rawBody, signature);
     }
+    /**
+     * Paystack Webhook - Public
+     * Paystack sends HMAC-SHA512(rawBody, secret_key) in the 'x-paystack-signature' header
+     */
+    async handlePaystackWebhook(req, payload, signature) {
+        const rawBody = req.rawBody?.toString() ?? JSON.stringify(payload);
+        return this.paymentService.handlePaystackWebhook(payload, rawBody, signature);
+    }
     async withdraw(req, dto) {
         return this.paymentService.initiateUserWithdrawal(req.user.id, dto.amount, dto.bankCode, // reusing bankCode field for mobileNetwork (e.g. "MTN", "VODAFONE")
         dto.accountNumber);
+    }
+    async confirmWithdraw(req, dto) {
+        return this.paymentService.confirmUserWithdrawal(req.user.id, dto.sessionId, dto.code);
     }
     async adminWithdraw(dto) {
         return this.paymentService.initiateAdminWithdrawal(dto.amount);
@@ -78,6 +89,17 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "handleKorapayWebhook", null);
 __decorate([
+    HttpCode(200),
+    Post('webhook/paystack'),
+    ApiOperation({ summary: 'Paystack Webhook' }),
+    __param(0, Req()),
+    __param(1, Body()),
+    __param(2, Headers('x-paystack-signature')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, String]),
+    __metadata("design:returntype", Promise)
+], PaymentController.prototype, "handlePaystackWebhook", null);
+__decorate([
     UseGuards(JwtAuthGuard),
     ApiBearerAuth('JWT-auth'),
     Post('withdraw'),
@@ -88,6 +110,17 @@ __decorate([
     __metadata("design:paramtypes", [Object, InitiateWithdrawalDto]),
     __metadata("design:returntype", Promise)
 ], PaymentController.prototype, "withdraw", null);
+__decorate([
+    UseGuards(JwtAuthGuard),
+    ApiBearerAuth('JWT-auth'),
+    Post('withdraw/confirm'),
+    ApiOperation({ summary: 'Confirm a mobile money withdrawal using 2FA' }),
+    __param(0, Request()),
+    __param(1, Body()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, ConfirmWithdrawalDto]),
+    __metadata("design:returntype", Promise)
+], PaymentController.prototype, "confirmWithdraw", null);
 __decorate([
     UseGuards(JwtAuthGuard, RolesGuard),
     Roles('ADMIN'),

@@ -6,7 +6,7 @@ import { WalletService } from '../wallet/wallet.service.js';
 @Injectable()
 export class AdminService {
     constructor(
-        private prisma: PrismaService,
+        @Inject(PrismaService) private prisma: PrismaService,
         @Inject(forwardRef(() => WalletService))
         private walletService: WalletService
     ) { }

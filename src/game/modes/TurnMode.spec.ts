@@ -6,6 +6,7 @@ describe('TurnMode', () => {
 
     beforeEach(() => {
         turnMode = new TurnMode(['player1', 'player2']);
+        turnMode.startGame();
     });
 
     it('should switch turn on no-hit foul', () => {
