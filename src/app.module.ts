@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -13,6 +13,7 @@ import { RedisModule } from './redis/redis.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { FraudModule } from './fraud/fraud.module.js';
 import { MetricsController } from './metrics.controller.js';
+import { MetricsInterceptor } from './common/interceptors/metrics.interceptor.js';
 
 @Module({
     imports: [
@@ -42,6 +43,10 @@ import { MetricsController } from './metrics.controller.js';
         {
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
+        },
+        {
+            provide: APP_INTERCEPTOR,
+            useClass: MetricsInterceptor,
         },
     ],
 })
