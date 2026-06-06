@@ -129,11 +129,11 @@ let GameService = class GameService {
     async getGame(gameId) {
         return this.loadGame(gameId);
     }
-    async handleShot(gameId, playerId, angle, power, sideSpin, backSpin) {
+    async handleShot(gameId, playerId, angle, power, sideSpin, backSpin, cueBallX, cueBallY) {
         const game = await this.loadGame(gameId);
         if (!game)
             throw new Error('Game not found');
-        const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin);
+        const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin, cueBallX, cueBallY);
         const gameState = game.mode.getGameState();
         const isFinished = game.mode.isFinished();
         const winner = game.mode.getWinner();
@@ -193,27 +193,32 @@ let GameService = class GameService {
     async checkAllTimeouts() {
         // Distributed Lock to prevent multiple nodes from scanning Redis at same time
         const lockKey = 'game:checkTimeouts:lock';
-        const lock = await this.redis.set(lockKey, '1', 'EX', 5, 'NX');
+        const lock = await this.redis.set(lockKey, '1', 'EX', 2, 'NX');
         if (!lock)
-            return [];
-        const timedOutGames = [];
+            return { endedGames: [], updatedGames: [] };
+        const endedGames = [];
+        const updatedGames = [];
         const keys = await this.redis.keys('game:active:*');
         for (const key of keys) {
             const gameId = key.replace('game:active:', '');
             const game = await this.loadGame(gameId);
             if (game) {
-                game.mode.updateStatus();
+                const hadChanges = game.mode.updateStatus();
                 if (game.mode.isFinished()) {
+                    const gameState = game.mode.getGameState();
+                    const winnerId = game.mode.getWinner();
                     await this.saveGame(gameId, game);
                     await this.endGame(gameId);
-                    timedOutGames.push(gameId);
+                    endedGames.push({ gameId, winnerId, gameState });
                 }
-                else {
+                else if (hadChanges) {
+                    const gameState = game.mode.getGameState();
                     await this.saveGame(gameId, game);
+                    updatedGames.push({ gameId, gameState });
                 }
             }
         }
-        return timedOutGames;
+        return { endedGames, updatedGames };
     }
     async handleDisconnectionBeforeMatch(userId, stake, matchId) {
         if (matchId) {

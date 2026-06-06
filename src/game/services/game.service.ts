@@ -134,11 +134,11 @@ export class GameService implements OnModuleInit {
         return this.loadGame(gameId);
     }
 
-    async handleShot(gameId: string, playerId: string, angle: number, power: number, sideSpin: number, backSpin: number) {
+    async handleShot(gameId: string, playerId: string, angle: number, power: number, sideSpin: number, backSpin: number, cueBallX?: number, cueBallY?: number) {
         const game = await this.loadGame(gameId);
         if (!game) throw new Error('Game not found');
 
-        const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin);
+        const result = game.mode.handleShot(playerId, angle, power, sideSpin, backSpin, cueBallX, cueBallY);
         const gameState = game.mode.getGameState();
         const isFinished = game.mode.isFinished();
         const winner = game.mode.getWinner();
@@ -201,30 +201,38 @@ export class GameService implements OnModuleInit {
         await this.redis.del(this.getGameKey(gameId));
     }
 
-    async checkAllTimeouts(): Promise<string[]> {
+    async checkAllTimeouts(): Promise<{
+        endedGames: { gameId: string; winnerId: string | null; gameState: any }[];
+        updatedGames: { gameId: string; gameState: any }[];
+    }> {
         // Distributed Lock to prevent multiple nodes from scanning Redis at same time
         const lockKey = 'game:checkTimeouts:lock';
-        const lock = await this.redis.set(lockKey, '1', 'EX', 5, 'NX');
-        if (!lock) return [];
+        const lock = await this.redis.set(lockKey, '1', 'EX', 2, 'NX');
+        if (!lock) return { endedGames: [], updatedGames: [] };
 
-        const timedOutGames: string[] = [];
+        const endedGames: { gameId: string; winnerId: string | null; gameState: any }[] = [];
+        const updatedGames: { gameId: string; gameState: any }[] = [];
         const keys = await this.redis.keys('game:active:*');
 
         for (const key of keys) {
             const gameId = key.replace('game:active:', '');
             const game = await this.loadGame(gameId);
             if (game) {
-                game.mode.updateStatus();
+                const hadChanges = game.mode.updateStatus();
                 if (game.mode.isFinished()) {
+                    const gameState = game.mode.getGameState();
+                    const winnerId = game.mode.getWinner();
                     await this.saveGame(gameId, game);
                     await this.endGame(gameId);
-                    timedOutGames.push(gameId);
-                } else {
+                    endedGames.push({ gameId, winnerId, gameState });
+                } else if (hadChanges) {
+                    const gameState = game.mode.getGameState();
                     await this.saveGame(gameId, game);
+                    updatedGames.push({ gameId, gameState });
                 }
             }
         }
-        return timedOutGames;
+        return { endedGames, updatedGames };
     }
 
     async handleDisconnectionBeforeMatch(userId: string, stake: number, matchId?: string) {

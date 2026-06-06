@@ -41,15 +41,64 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         @Inject(PrismaService) private prisma: PrismaService,
         @Inject(FraudService) private fraudService: FraudService,
     ) {
-        // Periodic check for timeouts (every 5 seconds)
+        // Periodic check for timeouts (every 1 second for Speed Mode responsiveness)
         setInterval(async () => {
-            const finishedGames = await this.gameService.checkAllTimeouts();
-            for (const gameId of finishedGames) {
-                this.server.to(gameId).emit('gameEnded', {
-                    message: 'Game ended due to timeout'
-                });
+            try {
+                const { endedGames, updatedGames } = await this.gameService.checkAllTimeouts();
+                
+                for (const { gameId, winnerId, gameState } of endedGames) {
+                    const game = await this.gameService.getGame(gameId);
+                    const playerIds = game ? game.players : [winnerId || ''];
+                    const players = await Promise.all(playerIds.map(async (pId) => {
+                        const user = await this.prisma.user.findUnique({
+                            where: { id: pId },
+                            select: { id: true, name: true, email: true }
+                        });
+                        return {
+                            id: pId,
+                            name: user?.name || user?.email?.split('@')[0] || 'Player'
+                        };
+                    }));
+                    const winnerUser = players.find(p => p.id === winnerId);
+                    const winnerName = winnerUser ? winnerUser.name : 'Unknown';
+
+                    this.server.to(gameId).emit('gameEnded', {
+                        message: `Game over! Winner: ${winnerName}`,
+                        winnerId: winnerId,
+                        gameState: {
+                            ...gameState,
+                            players,
+                            stake: game?.stake || 0,
+                            betAmount: game?.stake || 0
+                        }
+                    });
+                }
+
+                for (const { gameId, gameState } of updatedGames) {
+                    const game = await this.gameService.getGame(gameId);
+                    if (game) {
+                        const players = await Promise.all(game.players.map(async (pId) => {
+                            const user = await this.prisma.user.findUnique({
+                                where: { id: pId },
+                                select: { id: true, name: true, email: true }
+                            });
+                            return {
+                                id: pId,
+                                name: user?.name || user?.email?.split('@')[0] || 'Player'
+                            };
+                        }));
+                        this.server.to(gameId).emit('gameState', {
+                            ...gameState,
+                            players,
+                            stake: game.stake,
+                            betAmount: game.stake
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('[TimeoutScanner] Error checking timeouts:', err);
             }
-        }, 5000);
+        }, 1000);
     }
 
     async handleConnection(client: Socket) {
@@ -163,7 +212,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @SubscribeMessage('takeShot')
     async handleTakeShot(
         @ConnectedSocket() client: Socket,
-        @MessageBody() data: { gameId: string; userId: string; angle: number; power: number; sideSpin: number; backSpin: number },
+        @MessageBody() data: { gameId: string; userId: string; angle: number; power: number; sideSpin: number; backSpin: number; cueBallX?: number; cueBallY?: number },
     ) {
         console.log(`[TakeShot] Request from ${data.userId} for game ${data.gameId}`);
         // Input Throttling
@@ -215,7 +264,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                 data.angle,
                 data.power,
                 data.sideSpin || 0,
-                data.backSpin || 0
+                data.backSpin || 0,
+                data.cueBallX,
+                data.cueBallY
             );
             process.stdout.write(`[TakeShot] Simulation complete for ${data.gameId}.\n`);
 

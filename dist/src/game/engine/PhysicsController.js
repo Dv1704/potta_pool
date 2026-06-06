@@ -7,6 +7,10 @@ export class PhysicsController {
     _aBalls = [];
     _events = [];
     _firstBallCollided = null;
+    _fBackSpin = 0;
+    setBackSpin(fVal) {
+        this._fBackSpin = fVal;
+    }
     _aEdgesTopLeft = [];
     _aEdgesTopRight = [];
     _aEdgesBottomLeft = [];
@@ -236,20 +240,28 @@ export class PhysicsController {
         const iAngle = vDirInvert.angleBetweenVectors(vRayCollision);
         const iForceTransfer = iAngle / Constants.HALF_PI;
         let iNewForce;
-        // Skipping spin effects for now as they depend on complex UI interaction, 
-        // but the engine supports it if the client sends effect values.
-        const vTmpDir = new Vector2();
-        vTmpDir.setV(oBall.getCurForce());
-        vTmpDir.normalize();
-        iNewForce = oBall.getCurForceLen();
-        oBall.setCurForceV(PhysicsUtils.reflectVectorV2(vRayCollision, vTmpDir));
+        if (oBall.getNumber() === 0 && iForceTransfer < 0.3) {
+            const vRayNorm = new Vector2();
+            vRayCollision.getNormalize(vRayNorm);
+            this._addSideSpinEffect(vDirInvert, -1, vDirInvert, oBall);
+            iNewForce = this._addBackSpinEffect(oBall, this._fBackSpin, vRayCollision, vDirInvert);
+        }
+        else {
+            const vTmpDir = new Vector2();
+            vTmpDir.setV(oBall.getCurForce());
+            vTmpDir.normalize();
+            iNewForce = oBall.getCurForceLen();
+            oBall.setCurForceV(PhysicsUtils.reflectVectorV2(vRayCollision, vTmpDir));
+        }
         const iForce = iNewForce * Constants.K_IMPACT_BALL;
         oBall.normalizeCurForce();
         oBall.scalarProductCurForce((iForce * 0.8) * iForceTransfer + (iForce * 0.15));
         vRayCollision.invert();
         vRayCollision.normalize();
         vRayCollision.scalarProduct(iForce * (1 - iForceTransfer) + (iForce * 0.2));
-        aCollisions[iPos].oBall.addForce(vRayCollision);
+        const vRayCollisionScaled = new Vector2(vRayCollision.x, vRayCollision.y);
+        vRayCollisionScaled.scalarProduct(4); // Scale up sub-step force addition for frame accumulator
+        aCollisions[iPos].oBall.addForce(vRayCollisionScaled);
         return true;
     }
     collideBallWithEdges(oBall, aEdges, aPointsNormals) {
@@ -308,6 +320,9 @@ export class PhysicsController {
         if (bHit) {
             const vReflectedDir = PhysicsUtils.reflectVectorV2(oBall.getCurForce(), aEdges[hitEdgeIndex].getNormal());
             oBall.setPosV(vPos);
+            if (oBall.getNumber() === 0) {
+                this._addSideSpinEffect(vReflectedDir, 1, aEdges[hitEdgeIndex].calculateEdgeVector(), oBall);
+            }
             oBall.setCurForceV(vReflectedDir);
         }
         else {
@@ -322,62 +337,76 @@ export class PhysicsController {
     update(aBalls) {
         this._aBalls = aBalls;
         this._bAllBallsStopped = true;
+        const SUB_STEPS = 4;
+        // 1. Frame Start: Apply accumulated tmp forces and scale velocity down by SUB_STEPS
         for (const oBall of aBalls) {
-            // console.log(`[Physics] checking ball ${oBall.getNumber()} onTable=${oBall.isBallOnTable()}`);
             oBall.addCurForce(oBall.getTmpForce());
             oBall.setTmpForce(0, 0);
-            oBall.setPrevPos(oBall.getPos());
-            if (oBall.isBallOnTable()) {
-                let aHolesTest = [];
-                let aEdgesTest = [];
-                let aPointsNormalsTest = [];
-                switch (this._chooseQuadrant(oBall)) {
-                    case 0:
-                        aHolesTest = this._aHolesTopLeft;
-                        aEdgesTest = this._aEdgesTopLeft;
-                        aPointsNormalsTest = this._aPointsNormalsTopLeft;
-                        break;
-                    case 1:
-                        aHolesTest = this._aHolesTopRight;
-                        aEdgesTest = this._aEdgesTopRight;
-                        aPointsNormalsTest = this._aPointsNormalsTopRight;
-                        break;
-                    case 2:
-                        aHolesTest = this._aHolesBottomRight;
-                        aEdgesTest = this._aEdgesBottomRight;
-                        aPointsNormalsTest = this._aPointsNormalsBottomRight;
-                        break;
-                    case 3:
-                        aHolesTest = this._aHolesBottomLeft;
-                        aEdgesTest = this._aEdgesBottomLeft;
-                        aPointsNormalsTest = this._aPointsNormalsBottomLeft;
-                        break;
-                }
-                if (oBall.getHole() === null) {
-                    const oRetHole = this.collideBallWithHoles(oBall, aHolesTest);
-                    if (oRetHole !== null) {
-                        oBall.inHole(oRetHole);
-                        const vDirToHole = new Vector2(oRetHole.x - oBall.getX(), oRetHole.y - oBall.getY());
-                        vDirToHole.normalize();
-                        for (let k = 0; k < 5; k++) {
-                            oBall.addPos(vDirToHole);
+            const vForce = oBall.getCurForce();
+            oBall.setCurForce(vForce.x / SUB_STEPS, vForce.y / SUB_STEPS);
+        }
+        // 2. Sub-step Loop: Update positions and check collisions SUB_STEPS times
+        for (let step = 0; step < SUB_STEPS; step++) {
+            for (const oBall of aBalls) {
+                if (oBall.isBallOnTable()) {
+                    oBall.setPrevPos(oBall.getPos());
+                    let aHolesTest = [];
+                    let aEdgesTest = [];
+                    let aPointsNormalsTest = [];
+                    switch (this._chooseQuadrant(oBall)) {
+                        case 0:
+                            aHolesTest = this._aHolesTopLeft;
+                            aEdgesTest = this._aEdgesTopLeft;
+                            aPointsNormalsTest = this._aPointsNormalsTopLeft;
+                            break;
+                        case 1:
+                            aHolesTest = this._aHolesTopRight;
+                            aEdgesTest = this._aEdgesTopRight;
+                            aPointsNormalsTest = this._aPointsNormalsTopRight;
+                            break;
+                        case 2:
+                            aHolesTest = this._aHolesBottomRight;
+                            aEdgesTest = this._aEdgesBottomRight;
+                            aPointsNormalsTest = this._aPointsNormalsBottomRight;
+                            break;
+                        case 3:
+                            aHolesTest = this._aHolesBottomLeft;
+                            aEdgesTest = this._aEdgesBottomLeft;
+                            aPointsNormalsTest = this._aPointsNormalsBottomLeft;
+                            break;
+                    }
+                    if (oBall.getHole() === null) {
+                        const oRetHole = this.collideBallWithHoles(oBall, aHolesTest);
+                        if (oRetHole !== null) {
+                            oBall.inHole(oRetHole);
+                            const vDirToHole = new Vector2(oRetHole.x - oBall.getX(), oRetHole.y - oBall.getY());
+                            vDirToHole.normalize();
+                            for (let k = 0; k < 5; k++) {
+                                oBall.addPos(vDirToHole);
+                            }
+                        }
+                        else {
+                            this.collideBallWithEdges(oBall, aEdgesTest, aPointsNormalsTest);
                         }
                     }
                     else {
-                        this.collideBallWithEdges(oBall, aEdgesTest, aPointsNormalsTest);
+                        this.collideBallWithEdges(oBall, this._aHoleEdges, aPointsNormalsTest);
+                        // Simplified hole logic: if it's in a hole, it doesn't come back in this mode
+                        if (oBall.getCurForceLen2() < Constants.K_MIN_FORCE) {
+                            oBall.setFlagOnTable(false);
+                        }
                     }
                 }
                 else {
-                    this.collideBallWithEdges(oBall, this._aHoleEdges, aPointsNormalsTest);
-                    // Simplified hole logic: if it's in a hole, it doesn't come back in this mode
-                    if (oBall.getCurForceLen2() < Constants.K_MIN_FORCE) {
-                        oBall.setFlagOnTable(false);
-                    }
+                    oBall.setPrevPos(oBall.getPos());
+                    oBall.addPos(oBall.getCurForce());
                 }
             }
-            else {
-                oBall.addPos(oBall.getCurForce());
-            }
+        }
+        // 3. Frame End: Scale velocity back up by SUB_STEPS, apply friction and check stop conditions
+        for (const oBall of aBalls) {
+            const vForce = oBall.getCurForce();
+            oBall.setCurForce(vForce.x * SUB_STEPS, vForce.y * SUB_STEPS);
             oBall.scalarProductCurForce(Constants.K_FRICTION);
             const forceLen2 = oBall.getCurForceLen2();
             if (forceLen2 < Constants.K_MIN_FORCE) {
@@ -400,5 +429,53 @@ export class PhysicsController {
     resetEvents() {
         this._events = [];
         this._firstBallCollided = null;
+    }
+    _addBackSpinEffect(oBall, iValue, vRayCollision, vDirInvert) {
+        let iNewForce = oBall.getCurForceLen();
+        const vTmpDir = new Vector2();
+        vTmpDir.setV(oBall.getCurForce());
+        if (iValue === 0) {
+            vTmpDir.normalize();
+            iNewForce = oBall.getCurForceLen();
+            oBall.setCurForceV(PhysicsUtils.reflectVectorV2(vRayCollision, vTmpDir));
+        }
+        else {
+            const iEffectForce = PhysicsUtils.linearFunction(iValue, 0, Constants.MAX_SPIN_VALUE, 0, Constants.MAX_BACK_SPIN_CUE_FORCE);
+            const iForceRatio = oBall.getCurForceLen() / Constants.MAX_POWER_FORCE_BALL;
+            iNewForce = oBall.getCurForceLen() + (iEffectForce * iForceRatio);
+            if (iValue < 0) {
+                oBall.setCurForceV(vDirInvert);
+            }
+        }
+        return iNewForce;
+    }
+    _addSideSpinEffect(vReflectedDir, fRatio, oPerpendicularVector, oBall) {
+        const iBallForce = oBall.getCurForce().length();
+        const iValue = oBall.getSideEffect();
+        if (iValue === 0) {
+            return;
+        }
+        oBall.setSideEffect(iValue * 0.25);
+        let iFact = (iValue / Constants.MAX_SPIN_VALUE) * Constants.MAX_SPIN_VALUE;
+        const iPreRotation = PhysicsUtils.toDegree(vReflectedDir.angleBetweenVectors(oPerpendicularVector));
+        const vRotateReflection = new Vector2(vReflectedDir.getX(), vReflectedDir.getY());
+        const iPostRotation = PhysicsUtils.toDegree(vRotateReflection.angleBetweenVectors(oPerpendicularVector));
+        const bPreRotMajPostRot = iPreRotation < iPostRotation;
+        const bPositiveSideEffect = iValue > 0;
+        vRotateReflection.set(vReflectedDir.getX(), vReflectedDir.getY());
+        const fRatioForce = PhysicsUtils.linearFunction(iBallForce, Constants.MAX_POWER_FORCE_BALL, 0, 0.4, 0.7);
+        if (!bPositiveSideEffect && !bPreRotMajPostRot) {
+            if (iPostRotation < 90) {
+                iFact *= -1;
+            }
+        }
+        else if (bPreRotMajPostRot && bPositiveSideEffect) {
+            if (iPostRotation < 90) {
+                iFact *= -1;
+            }
+        }
+        const fTotRatio = fRatio - fRatioForce;
+        PhysicsUtils.rotateVector2D(PhysicsUtils.toRadian(iFact * fTotRatio), vRotateReflection);
+        vReflectedDir.set(vRotateReflection.getX(), vRotateReflection.getY());
     }
 }

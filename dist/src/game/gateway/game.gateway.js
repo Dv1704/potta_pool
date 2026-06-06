@@ -34,15 +34,62 @@ let GameGateway = class GameGateway {
         this.walletService = walletService;
         this.prisma = prisma;
         this.fraudService = fraudService;
-        // Periodic check for timeouts (every 5 seconds)
+        // Periodic check for timeouts (every 1 second for Speed Mode responsiveness)
         setInterval(async () => {
-            const finishedGames = await this.gameService.checkAllTimeouts();
-            for (const gameId of finishedGames) {
-                this.server.to(gameId).emit('gameEnded', {
-                    message: 'Game ended due to timeout'
-                });
+            try {
+                const { endedGames, updatedGames } = await this.gameService.checkAllTimeouts();
+                for (const { gameId, winnerId, gameState } of endedGames) {
+                    const game = await this.gameService.getGame(gameId);
+                    const playerIds = game ? game.players : [winnerId || ''];
+                    const players = await Promise.all(playerIds.map(async (pId) => {
+                        const user = await this.prisma.user.findUnique({
+                            where: { id: pId },
+                            select: { id: true, name: true, email: true }
+                        });
+                        return {
+                            id: pId,
+                            name: user?.name || user?.email?.split('@')[0] || 'Player'
+                        };
+                    }));
+                    const winnerUser = players.find(p => p.id === winnerId);
+                    const winnerName = winnerUser ? winnerUser.name : 'Unknown';
+                    this.server.to(gameId).emit('gameEnded', {
+                        message: `Game over! Winner: ${winnerName}`,
+                        winnerId: winnerId,
+                        gameState: {
+                            ...gameState,
+                            players,
+                            stake: game?.stake || 0,
+                            betAmount: game?.stake || 0
+                        }
+                    });
+                }
+                for (const { gameId, gameState } of updatedGames) {
+                    const game = await this.gameService.getGame(gameId);
+                    if (game) {
+                        const players = await Promise.all(game.players.map(async (pId) => {
+                            const user = await this.prisma.user.findUnique({
+                                where: { id: pId },
+                                select: { id: true, name: true, email: true }
+                            });
+                            return {
+                                id: pId,
+                                name: user?.name || user?.email?.split('@')[0] || 'Player'
+                            };
+                        }));
+                        this.server.to(gameId).emit('gameState', {
+                            ...gameState,
+                            players,
+                            stake: game.stake,
+                            betAmount: game.stake
+                        });
+                    }
+                }
             }
-        }, 5000);
+            catch (err) {
+                console.error('[TimeoutScanner] Error checking timeouts:', err);
+            }
+        }, 1000);
     }
     async handleConnection(client) {
         console.log(`Client connected: ${client.id}`);
@@ -180,7 +227,7 @@ let GameGateway = class GameGateway {
                 };
             }));
             process.stdout.write(`[TakeShot] Starting simulation for ${data.gameId}...\n`);
-            const shotInfo = await this.gameService.handleShot(data.gameId, data.userId, data.angle, data.power, data.sideSpin || 0, data.backSpin || 0);
+            const shotInfo = await this.gameService.handleShot(data.gameId, data.userId, data.angle, data.power, data.sideSpin || 0, data.backSpin || 0, data.cueBallX, data.cueBallY);
             process.stdout.write(`[TakeShot] Simulation complete for ${data.gameId}.\n`);
             const { result, gameState, isFinished, winner } = shotInfo;
             // 3. BROADCAST RESULT (The "Correction")

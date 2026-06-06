@@ -26,8 +26,8 @@ export abstract class GameMode {
 
     abstract startGame(): void;
 
-    abstract handleShot(playerId: string, angle: number, power: number, sideSpin: number, backSpin: number): ShotResult;
-    abstract updateStatus(): void;
+    abstract handleShot(playerId: string, angle: number, power: number, sideSpin: number, backSpin: number, cueBallX?: number, cueBallY?: number): ShotResult;
+    abstract updateStatus(): boolean;
     abstract getGameState(): GameState;
     abstract serialize(): any;
     abstract hydrate(state: any): void;

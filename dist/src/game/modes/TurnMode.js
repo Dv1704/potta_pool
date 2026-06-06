@@ -12,6 +12,7 @@ export class TurnMode extends GameMode {
     foulOccurred = false;
     turnExpiration = 0;
     SHOT_TIMEOUT_MS = 30000;
+    isBreakShot = true;
     constructor(players) {
         super(players, Constants.GAME_MODE_EIGHT);
         this.players.forEach(id => this.playerGroups[id] = BallGroup.NONE);
@@ -24,7 +25,7 @@ export class TurnMode extends GameMode {
     resetTimer() {
         this.turnExpiration = Date.now() + this.SHOT_TIMEOUT_MS;
     }
-    handleShot(playerId, angle, power, sideSpin, backSpin) {
+    handleShot(playerId, angle, power, sideSpin, backSpin, cueBallX, cueBallY) {
         if (this.isGameOver)
             throw new Error('Game is already over');
         if (!this.isGameStarted)
@@ -33,13 +34,12 @@ export class TurnMode extends GameMode {
             throw new Error('Not your turn');
         }
         if (Date.now() > this.turnExpiration) {
-            this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
-            this.resetTimer();
+            this.updateStatus();
             throw new Error('Turn timed out');
         }
         this.foulOccurred = false;
         // Use 1.0x power scaling (matches frontend)
-        const result = this.engine.executeShot(angle, power, sideSpin, backSpin);
+        const result = this.engine.executeShot(angle, power, sideSpin, backSpin, cueBallX, cueBallY);
         // Convert animation frames back to percentages for frontend (0-100%)
         result.animationFrames = result.animationFrames.map(frame => {
             const converted = {};
@@ -63,27 +63,47 @@ export class TurnMode extends GameMode {
         const playerGroup = this.playerGroups[playerId];
         if (result.cueBallScratched)
             this.foulOccurred = true;
-        if (result.firstBallCollided === null)
-            this.foulOccurred = true;
-        if (this.groupAssigned && result.firstBallCollided !== null) {
-            const firstHit = result.firstBallCollided;
-            const is8Ball = firstHit === 8;
-            let isCorrectGroup = false;
-            if (playerGroup === BallGroup.SOLIDS) {
-                isCorrectGroup = firstHit >= 1 && firstHit <= 7;
+        if (this.isBreakShot) {
+            // For the break shot, at least 4 object balls (1-15) must hit cushions (rails)
+            // or at least one object ball must be pocketed.
+            const objectBallsPotted = result.pocketedBalls.filter(id => id !== 0);
+            const uniqueObjectBallsHittingRail = new Set();
+            result.events.forEach(e => {
+                if (e.type === 'edge_collision' && e.ballId >= 1 && e.ballId <= 15) {
+                    uniqueObjectBallsHittingRail.add(e.ballId);
+                }
+            });
+            const hasScatter = uniqueObjectBallsHittingRail.size >= 4 || objectBallsPotted.length > 0;
+            if (!hasScatter) {
+                console.log(`[TurnMode] Foul: Illegal break shot. Cushion hits: ${uniqueObjectBallsHittingRail.size}, pocketed: ${objectBallsPotted.length}`);
+                this.foulOccurred = true;
             }
-            else if (playerGroup === BallGroup.STRIPES) {
-                isCorrectGroup = firstHit >= 9 && firstHit <= 15;
+            this.isBreakShot = false; // Next shot is not a break shot
+        }
+        else {
+            // Normal shot foul rules
+            if (result.firstBallCollided === null)
+                this.foulOccurred = true;
+            if (this.groupAssigned && result.firstBallCollided !== null) {
+                const firstHit = result.firstBallCollided;
+                const is8Ball = firstHit === 8;
+                let isCorrectGroup = false;
+                if (playerGroup === BallGroup.SOLIDS) {
+                    isCorrectGroup = firstHit >= 1 && firstHit <= 7;
+                }
+                else if (playerGroup === BallGroup.STRIPES) {
+                    isCorrectGroup = firstHit >= 9 && firstHit <= 15;
+                }
+                const remainingInGroup = this.getRemainingBallsInGroup(playerGroup);
+                if (remainingInGroup === 0 && is8Ball)
+                    isCorrectGroup = true;
+                if (!isCorrectGroup)
+                    this.foulOccurred = true;
             }
-            const remainingInGroup = this.getRemainingBallsInGroup(playerGroup);
-            if (remainingInGroup === 0 && is8Ball)
-                isCorrectGroup = true;
-            if (!isCorrectGroup)
+            const railHit = result.events.some(e => e.type === 'edge_collision');
+            if (!railHit && result.pocketedBalls.length === 0)
                 this.foulOccurred = true;
         }
-        const railHit = result.events.some(e => e.type === 'edge_collision');
-        if (!railHit && result.pocketedBalls.length === 0)
-            this.foulOccurred = true;
         if (!this.foulOccurred && !this.groupAssigned && result.pocketedBalls.length > 0) {
             const firstPotted = result.pocketedBalls[0];
             if (firstPotted >= 1 && firstPotted <= 7) {
@@ -124,7 +144,17 @@ export class TurnMode extends GameMode {
             this.winner = this.players.find(id => id !== playerId);
         }
     }
-    updateStatus() { }
+    updateStatus() {
+        if (!this.isGameStarted || this.isGameOver)
+            return false;
+        if (Date.now() > this.turnExpiration) {
+            this.foulOccurred = true;
+            this.currentTurnIndex = (this.currentTurnIndex + 1) % 2;
+            this.resetTimer();
+            return true;
+        }
+        return false;
+    }
     getGameState() {
         const balls = this.engine.getBalls();
         const ballStates = {};
@@ -143,7 +173,11 @@ export class TurnMode extends GameMode {
             winner: this.winner,
             timer: this.isGameStarted ? Math.max(0, Math.ceil((this.turnExpiration - Date.now()) / 1000)) : 30,
             turnExpiration: this.turnExpiration,
-            isGameStarted: this.isGameStarted
+            isGameStarted: this.isGameStarted,
+            // Custom Turn Mode fields
+            foulOccurred: this.foulOccurred,
+            playerGroups: this.playerGroups,
+            groupAssigned: this.groupAssigned
         };
     }
     serialize() {
@@ -156,6 +190,7 @@ export class TurnMode extends GameMode {
             playerGroups: this.playerGroups,
             groupAssigned: this.groupAssigned,
             foulOccurred: this.foulOccurred,
+            isBreakShot: this.isBreakShot,
             balls: this.getGameState().balls
         };
     }
@@ -168,6 +203,7 @@ export class TurnMode extends GameMode {
         this.playerGroups = state.playerGroups;
         this.groupAssigned = state.groupAssigned;
         this.foulOccurred = state.foulOccurred;
+        this.isBreakShot = state.isBreakShot !== undefined ? state.isBreakShot : true;
         const balls = this.getBalls();
         for (const ball of balls) {
             const bState = state.balls[ball.getNumber()];

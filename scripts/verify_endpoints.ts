@@ -1,6 +1,6 @@
 // import { fetch } from 'undici'; // Global fetch is available in Node 18+
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
 async function verify() {
     console.log('--- Starting API Verification ---');

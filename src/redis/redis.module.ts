@@ -1,5 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Redis } from 'ioredis';
 import RedisMock from 'ioredis-mock';
 
 @Global()
@@ -8,7 +9,17 @@ import RedisMock from 'ioredis-mock';
         {
             provide: 'REDIS_CLIENT',
             useFactory: (configService: ConfigService) => {
-                // Using in-memory Redis mock for single-node cost optimization
+                const redisUrl = configService.get<string>('REDIS_URL');
+                if (redisUrl) {
+                    try {
+                        console.log('Connecting to Redis at:', redisUrl);
+                        return new Redis(redisUrl, {
+                            maxRetriesPerRequest: 3,
+                        });
+                    } catch (e: any) {
+                        console.warn('Failed to connect to Redis, falling back to mock:', e.message);
+                    }
+                }
                 console.log('Using in-memory Redis (ioredis-mock)');
                 return new RedisMock();
             },
@@ -18,3 +29,4 @@ import RedisMock from 'ioredis-mock';
     exports: ['REDIS_CLIENT'],
 })
 export class RedisModule { }
+

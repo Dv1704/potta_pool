@@ -40,13 +40,18 @@ export class PoolEngine {
             }
         }
     }
-    executeShot(angle, power, sideSpin, backSpin) {
+    executeShot(angle, power, sideSpin, backSpin, cueBallX, cueBallY) {
         const cueBall = this._balls[0];
-        if (!cueBall.isBallOnTable()) {
+        if (cueBallX !== undefined && cueBallY !== undefined) {
+            cueBall.setPos((cueBallX / 100) * Constants.CANVAS_WIDTH, (cueBallY / 100) * Constants.CANVAS_HEIGHT);
+            cueBall.setFlagOnTable(true);
+        }
+        else if (!cueBall.isBallOnTable()) {
             cueBall.setPos(Constants.CUE_BALL_POS.x, Constants.CUE_BALL_POS.y);
             cueBall.setFlagOnTable(true);
         }
         this._physics.resetEvents();
+        this._physics.setBackSpin(backSpin);
         const fRad = (angle * Math.PI) / 180;
         const force = new Vector2(Math.cos(fRad), Math.sin(fRad));
         // Match frontend scaling
