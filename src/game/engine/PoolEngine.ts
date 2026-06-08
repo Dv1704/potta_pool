@@ -79,7 +79,13 @@ export class PoolEngine {
         cueBall.addForce(force);
         cueBall.setSideEffect(sideSpin);
 
+        const initialOnTable: Map<number, boolean> = new Map();
+        for (const ball of this._balls) {
+            initialOnTable.set(ball.getNumber(), ball.isBallOnTable());
+        }
+
         const pocketedBalls: number[] = [];
+        const pocketedSet = new Set<number>();
         let cueBallScratched = false;
         const animationFrames: { [key: number]: { x: number; y: number } }[] = [];
 
@@ -110,13 +116,28 @@ export class PoolEngine {
                 if (ball.getHole() && ball.isBallOnTable()) {
                     if (ball.getNumber() === 0) {
                         cueBallScratched = true;
-                    } else {
+                    } else if (!pocketedSet.has(ball.getNumber())) {
                         pocketedBalls.push(ball.getNumber());
+                        pocketedSet.add(ball.getNumber());
                     }
                     ball.setFlagOnTable(false);
                 }
             }
         } while (!this._physics.areBallsStopped() && frames < maxFrames);
+
+        // Ensure any balls that were already discovered in a hole but ended off-table are still counted
+        for (const ball of this._balls) {
+            const id = ball.getNumber();
+            const wasOnTable = initialOnTable.get(id);
+            if (wasOnTable && ball.getHole() !== null && !ball.isBallOnTable()) {
+                if (id === 0) {
+                    cueBallScratched = true;
+                } else if (!pocketedSet.has(id)) {
+                    pocketedBalls.push(id);
+                    pocketedSet.add(id);
+                }
+            }
+        }
 
         const finalState: any = {};
         for (const ball of this._balls) {

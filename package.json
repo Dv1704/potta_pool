@@ -18,6 +18,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:pvp": "node --experimental-vm-modules node_modules/jest/bin/jest.js src/game/gateway/game.gateway.spec.ts",
+    "test:live-pvp": "node test-pvp-scenarios.js",
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --testTimeout=30000"
   },
   "repository": {

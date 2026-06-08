@@ -1,5 +1,6 @@
 import { SpeedMode } from './SpeedMode';
 import * as Constants from '../engine/Constants';
+import { jest } from '@jest/globals';
 
 describe('SpeedMode', () => {
     let speedMode: SpeedMode;

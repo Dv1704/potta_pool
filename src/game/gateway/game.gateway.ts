@@ -303,6 +303,39 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
+    @SubscribeMessage('gameChat')
+    async handleGameChat(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; userId: string; messageId: string; text: string },
+    ) {
+        try {
+            const game = await this.gameService.getGame(data.gameId);
+            if (!game || !game.players.includes(data.userId)) {
+                client.emit('error', { message: 'Unable to send chat to this game.' });
+                return;
+            }
+
+            const user = await this.prisma.user.findUnique({
+                where: { id: data.userId },
+                select: { id: true, name: true, email: true }
+            });
+
+            const senderName = user?.name || user?.email?.split('@')[0] || 'Player';
+            const timestamp = Date.now();
+
+            this.server.to(data.gameId).emit('gameChat', {
+                messageId: data.messageId,
+                userId: data.userId,
+                senderName,
+                text: data.text,
+                timestamp,
+            });
+        } catch (error: any) {
+            console.error(`[GameChat] Error from user ${data.userId}: ${error?.message}`);
+            client.emit('error', { message: error?.message || 'Failed to send chat message' });
+        }
+    }
+
     @SubscribeMessage('joinGame')
     handleJoinGame(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
         client.join(data.gameId);
