@@ -22,6 +22,14 @@ export class WalletController {
         private readonly prisma: PrismaService
     ) { }
 
+    @Get()
+    @UseGuards(JwtAuthGuard)
+    @ApiOperation({ summary: 'Get wallet summary (alias for /wallet/balance)' })
+    @ApiResponse({ status: 200, type: BalanceResponseDto })
+    async getWallet(@Request() req: any) {
+        return this.walletService.getBalance(req.user.id);
+    }
+
     @Get('balance')
     @UseGuards(JwtAuthGuard)
     @ApiOperation({ summary: 'Get current wallet balance' })

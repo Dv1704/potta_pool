@@ -12,8 +12,16 @@ export class MetricsController {
         res.set('Content-Type', register.contentType);
         try {
             const appMetrics = await register.metrics();
-            const prismaMetrics = await (this.prisma as any).$metrics.prometheus();
-            res.end(appMetrics + '\n' + prismaMetrics);
+
+            // Prisma metrics are optional — only available when the metrics extension is enabled
+            let prismaMetrics = '';
+            try {
+                prismaMetrics = await (this.prisma as any).$metrics.prometheus();
+            } catch {
+                // Prisma metrics extension not configured — skip silently
+            }
+
+            res.end(prismaMetrics ? appMetrics + '\n' + prismaMetrics : appMetrics);
         } catch (error: any) {
             res.status(500).send(error.message);
         }

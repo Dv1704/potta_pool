@@ -19,15 +19,15 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     async validate(payload: JwtPayload) {
-        console.log('JwtStrategy validating payload:', payload);
         const user = await this.usersService.findById(payload.sub);
         if (!user) {
-            console.log('JwtStrategy: User not found for id:', payload.sub);
             throw new UnauthorizedException();
         }
         if (user.isBanned) {
             throw new UnauthorizedException('Account is suspended');
         }
-        return user;
+        // Strip sensitive fields — req.user is returned directly from profile endpoint
+        const { password, resetToken, resetTokenExpiry, ...safeUser } = user as any;
+        return safeUser;
     }
 }
