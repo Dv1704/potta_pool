@@ -169,7 +169,18 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                     await this.gameService.createGame(gameId, playerIds, data.mode, data.stake);
                     const game = await this.gameService.getGame(gameId);
 
-                    // Fetch opponent names from database
+                    // Fetch opponent names and all players data from database
+                    const players = await Promise.all(playerIds.map(async (pId: string) => {
+                        const user = await this.prisma.user.findUnique({
+                            where: { id: pId },
+                            select: { id: true, name: true, email: true }
+                        });
+                        return {
+                            id: pId,
+                            name: user?.name || user?.email?.split('@')[0] || 'Player'
+                        };
+                    }));
+
                     for (const p of match) {
                         const socket = this.server.sockets.sockets.get(p.socketId);
                         if (socket) {
@@ -178,18 +189,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
                         }
 
                         const opponentId = playerIds.find((id: string) => id !== p.userId);
-                        const opponent = await this.prisma.user.findUnique({
-                            where: { id: opponentId },
-                            select: { name: true, email: true }
-                        });
+                        const opponent = players.find(pl => pl.id === opponentId);
 
                         this.server.to(p.socketId).emit('matchFound', {
                             gameId,
                             opponentId,
-                            opponentName: opponent?.name || opponent?.email?.split('@')[0] || 'Player',
+                            opponentName: opponent?.name || 'Player',
                             mode: data.mode,
                             stake: data.stake,
-                            gameState: game?.mode.getGameState()
+                            gameState: {
+                                ...game?.mode.getGameState(),
+                                players,
+                                stake: game?.stake || 0,
+                                betAmount: game?.stake || 0
+                            }
                         });
                     }
                     console.log(`[JoinQueue] Game ${gameId} created successfully.`);

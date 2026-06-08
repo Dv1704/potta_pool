@@ -23,7 +23,8 @@ async function testWin() {
     const result = turnMode.handleShot('player1', 0, 10, 0, 0);
 
     console.log('8-ball onTable after shot:', balls[8].isBallOnTable());
-    console.log('8-ball getHole after shot:', balls[8].getHole() ? 'Vector2(' + balls[8].getHole().x + ',' + balls[8].getHole().y + ')' : 'null');
+    const hole = balls[8].getHole();
+    console.log('8-ball getHole after shot:', hole ? 'Vector2(' + hole.x + ',' + hole.y + ')' : 'null');
     console.log('pocketedBalls:', result.pocketedBalls);
 }
 
