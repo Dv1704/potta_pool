@@ -3,7 +3,7 @@ import { Ball } from '../engine/Ball.js';
 
 export interface GameState {
     balls: { [key: number]: { x: number; y: number; onTable: boolean } };
-    turn: string; // userId of the player whose turn it is
+    turn?: string; // userId of the player whose turn it is (optional for speed mode)
     isGameOver: boolean;
     winner: string | null;
     timer?: number;

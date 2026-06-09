@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Get, Request, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto.js';
+import { LoginDto, RegisterDto, ForgotPasswordDto, ResetPasswordDto, VerifyLoginDto } from './dto/auth.dto.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
@@ -21,16 +21,41 @@ export class AuthController {
 
     @Post('login')
     @ApiOperation({ summary: 'Login user' })
-    @ApiResponse({ status: 200, description: 'Login successful, returns JWT token' })
+    @ApiResponse({ status: 200, description: 'Login successful, returns JWT token or verification session' })
     @ApiResponse({ status: 401, description: 'Invalid credentials or account suspended' })
     async login(@Body() loginDto: LoginDto, @Request() req: any) {
         const user = await this.authService.validateUser(loginDto.email, loginDto.password);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
         }
+
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const ipStr = Array.isArray(ip) ? ip[0] : ip;
+
+        const now = new Date();
+        const lastLoginAt = user.lastLoginAt ? new Date(user.lastLoginAt) : null;
+        const needsVerification = !lastLoginAt || (now.getTime() - lastLoginAt.getTime()) > 24 * 60 * 60 * 1000;
+
+        if (needsVerification) {
+            const { sessionId } = await this.authService.generateLoginVerification(user, ipStr);
+            return {
+                requiresVerification: true,
+                message: 'A verification code was sent to your email. Enter the code to complete login.',
+                sessionId,
+            };
+        }
+
         return this.authService.login(user, ipStr);
+    }
+
+    @Post('verify-login')
+    @ApiOperation({ summary: 'Verify login with email code' })
+    @ApiResponse({ status: 200, description: 'Login verified and returns JWT token' })
+    @ApiResponse({ status: 401, description: 'Invalid or expired verification code' })
+    async verifyLogin(@Body() verifyLoginDto: VerifyLoginDto, @Request() req: any) {
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        const ipStr = Array.isArray(ip) ? ip[0] : ip;
+        return this.authService.verifyLogin(verifyLoginDto.sessionId, verifyLoginDto.code, ipStr);
     }
 
     @UseGuards(JwtAuthGuard)

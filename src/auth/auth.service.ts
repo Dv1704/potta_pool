@@ -33,12 +33,31 @@ export class AuthService {
             try {
                 await this.usersService.update({
                     where: { id: user.id },
-                    data: { lastLoginIp: ip }
+                    data: { lastLoginIp: ip, lastLoginAt: new Date() }
                 });
             } catch (err) {
                 // Ignore IP update failure to not block login
             }
         }
+        const payload: JwtPayload = { email: user.email, sub: user.id, role: user.role };
+        return {
+            access_token: this.jwtService.sign(payload),
+        };
+    }
+
+    async verifyLogin(sessionId: string, code: string, ip?: string) {
+        const user = await this.usersService.verifyLoginCode(sessionId, code);
+        if (ip) {
+            try {
+                await this.usersService.update({
+                    where: { id: user.id },
+                    data: { lastLoginIp: ip, lastLoginAt: new Date() }
+                });
+            } catch (_err) {
+                // Ignore IP update failure to not block login
+            }
+        }
+
         const payload: JwtPayload = { email: user.email, sub: user.id, role: user.role };
         return {
             access_token: this.jwtService.sign(payload),
@@ -80,7 +99,8 @@ export class AuthService {
             role: 'USER', // Default role
             wallet: { create: {} }, // Initialize wallet
             registrationIp: ip,
-            lastLoginIp: ip
+            lastLoginIp: ip,
+            lastLoginAt: new Date()
         });
 
         // Trigger creator tier evaluation for referrer
@@ -99,6 +119,21 @@ export class AuthService {
 
         const { password, ...result } = user;
         return result;
+    }
+
+    async generateLoginVerification(user: any, ip?: string) {
+        const session = await this.usersService.generateAndSendVerificationCode(user.id, user.email, 'login');
+        if (ip) {
+            try {
+                await this.usersService.update({
+                    where: { id: user.id },
+                    data: { lastLoginIp: ip }
+                });
+            } catch (_err) {
+                // Ignore IP update failure to not block login flow
+            }
+        }
+        return session;
     }
 
     async forgotPassword(email: string) {

@@ -28,6 +28,7 @@ model User {
   influencerGames    Game[]   @relation("GameInfluencer")
   influencerPayouts  InfluencerEarning[] @relation("InfluencerPayouts")
   lastLoginIp        String?
+  lastLoginAt        DateTime?
   registrationIp     String?
   creatorTier        String   @default("BRONZE") // BRONZE, SILVER, GOLD, ELITE
   isVerified         Boolean  @default(false)

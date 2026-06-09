@@ -37,3 +37,11 @@ export class ResetPasswordDto {
     @ApiProperty({ example: 'newPassword123' })
     newPassword!: string;
 }
+
+export class VerifyLoginDto {
+    @ApiProperty({ example: '5508e5ad-83fb-4c9e-8b84-2436d7a88f61' })
+    sessionId!: string;
+
+    @ApiProperty({ example: '483920' })
+    code!: string;
+}

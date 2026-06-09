@@ -5,9 +5,19 @@ import { EmailService } from '../email/email.service.js';
 import { ConfigService } from '@nestjs/config';
 import * as crypto from 'crypto';
 
+type VerificationPurpose = 'emailVerification' | 'login';
+
+interface VerificationSession {
+    code: string;
+    email: string;
+    expiresAt: Date;
+    userId: string;
+    purpose: VerificationPurpose;
+}
+
 @Injectable()
 export class UsersService {
-    private verificationCodes = new Map<string, { code: string; email: string; expiresAt: Date }>();
+    private verificationCodes = new Map<string, VerificationSession>();
 
     constructor(
         @Inject(PrismaService) private prisma: PrismaService,
@@ -208,12 +218,12 @@ export class UsersService {
         }
     }
 
-    async generateAndSendVerificationCode(userId: string, email: string): Promise<{ sessionId: string }> {
+    async generateAndSendVerificationCode(userId: string, email: string, purpose: VerificationPurpose = 'emailVerification'): Promise<{ sessionId: string }> {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const sessionId = crypto.randomUUID();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
 
-        this.verificationCodes.set(sessionId, { code, email, expiresAt });
+        this.verificationCodes.set(sessionId, { code, email, expiresAt, userId, purpose });
 
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
@@ -229,7 +239,7 @@ export class UsersService {
 
     async verifyEmailCode(userId: string, sessionId: string, code: string): Promise<User> {
         const session = this.verificationCodes.get(sessionId);
-        if (!session) {
+        if (!session || session.purpose !== 'emailVerification' || session.userId !== userId) {
             throw new BadRequestException('Invalid or expired verification session');
         }
         if (new Date() > session.expiresAt) {
@@ -242,7 +252,29 @@ export class UsersService {
 
         this.verificationCodes.delete(sessionId);
 
-        // Update database
         return this.toggleEmailVerification(userId, true);
+    }
+
+    async verifyLoginCode(sessionId: string, code: string): Promise<User> {
+        const session = this.verificationCodes.get(sessionId);
+        if (!session || session.purpose !== 'login') {
+            throw new BadRequestException('Invalid or expired login verification session');
+        }
+        if (new Date() > session.expiresAt) {
+            this.verificationCodes.delete(sessionId);
+            throw new BadRequestException('Verification code has expired');
+        }
+        if (session.code !== code) {
+            throw new BadRequestException('Invalid verification code');
+        }
+
+        this.verificationCodes.delete(sessionId);
+
+        const user = await this.findById(session.userId);
+        if (!user) {
+            throw new BadRequestException('Verification session user not found');
+        }
+
+        return user;
     }
 }

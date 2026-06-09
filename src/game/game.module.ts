@@ -6,10 +6,11 @@ import { GameController } from './controllers/game.controller.js';
 import { WalletModule } from '../wallet/wallet.module.js';
 import { PrismaModule } from '../prisma/prisma.module.js';
 import { FraudModule } from '../fraud/fraud.module.js';
+import { UsersModule } from '../users/users.module.js';
 import { GameCleanupService } from './services/game-cleanup.service.js';
 
 @Module({
-    imports: [WalletModule, PrismaModule, FraudModule],
+    imports: [WalletModule, PrismaModule, FraudModule, UsersModule],
     controllers: [GameController],
     providers: [MatchmakingService, GameService, GameGateway, GameCleanupService],
     exports: [GameService],
