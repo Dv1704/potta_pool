@@ -71,14 +71,4 @@ export class WalletController {
         return this.transferService.confirmTransfer(req.user.id, dto.sessionId, dto.code);
     }
 
-    @Post('debug/inject-balance')
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles('ADMIN')
-    @ApiBearerAuth('JWT-auth')
-    @ApiOperation({ summary: 'ADMIN ONLY: Inject balance for testing — REMOVE IN PRODUCTION' })
-    async injectBalance(@Body() body: { email: string, amount: number }) {
-        const user = await this.prisma.user.findUnique({ where: { email: body.email } });
-        if (!user) return { error: 'User not found' };
-        return this.walletService.deposit(user.id, body.amount);
-    }
 }

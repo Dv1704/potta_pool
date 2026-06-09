@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, BadRequestException, ServiceUnavailableException, Inject } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { User, Prisma } from '@prisma/client';
 import { EmailService } from '../email/email.service.js';
@@ -232,7 +232,11 @@ export class UsersService {
 
         const name = user?.name || 'Potta User';
 
-        await this.emailService.sendVerificationCodeEmail(email, name, code);
+        try {
+            await this.emailService.sendVerificationCodeEmail(email, name, code);
+        } catch (err: any) {
+            throw new ServiceUnavailableException('Unable to send verification email. Please try again later.');
+        }
 
         return { sessionId };
     }

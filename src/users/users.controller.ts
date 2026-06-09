@@ -24,14 +24,6 @@ export class UsersController {
 
     @UseGuards(JwtAuthGuard)
     @ApiBearerAuth('JWT-auth')
-    @Post('verify-email') // Simulation endpoint (legacy)
-    @ApiOperation({ summary: 'Toggle email verification status' })
-    async toggleEmail(@Request() req: any, @Body('status') status: boolean) {
-        return this.usersService.toggleEmailVerification(req.user.id, status);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
     @Post('verify-email/send')
     @ApiOperation({ summary: 'Send verification code to user email' })
     async sendVerification(@Request() req: any) {
@@ -47,14 +39,6 @@ export class UsersController {
             throw new BadRequestException('Session ID and code are required');
         }
         return this.usersService.verifyEmailCode(req.user.id, body.sessionId, body.code);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @ApiBearerAuth('JWT-auth')
-    @Post('toggle-2fa') // Simulation endpoint
-    @ApiOperation({ summary: 'Toggle 2FA status' })
-    async toggle2FA(@Request() req: any, @Body('status') status: boolean) {
-        return this.usersService.toggleTwoFactor(req.user.id, status);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)

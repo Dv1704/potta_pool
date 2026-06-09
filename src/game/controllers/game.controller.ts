@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, UseGuards, Request, Param, NotFoundException } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { GameService } from '../services/game.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
@@ -18,6 +19,7 @@ export class GameController {
      * No authentication required
      */
     @Post('demo-shot')
+    @Throttle({ default: { limit: 20, ttl: 60000 } })
     @ApiOperation({ summary: 'Execute a demo shot with real physics' })
     @ApiResponse({ status: 200, description: 'Returns animation frames for ball movement' })
     async demoShot(
@@ -243,16 +245,15 @@ export class GameController {
     async getLeaderboard() {
         // Get top 10 players by wins
         const topPlayers = await this.prisma.$queryRaw`
-            SELECT 
+            SELECT
                 u.id,
                 u.name,
-                u.email,
                 COUNT(CASE WHEN g."winnerId" = u.id THEN 1 END)::int as wins,
                 COUNT(g.id)::int as total_games,
                 MAX(CASE WHEN g."winnerId" = u.id THEN g."updatedAt" ELSE NULL END) as last_win
             FROM "User" u
             LEFT JOIN "Game" g ON u.id = ANY(g.players) AND g.status = 'COMPLETED'
-            GROUP BY u.id, u.name, u.email
+            GROUP BY u.id, u.name
             HAVING COUNT(CASE WHEN g."winnerId" = u.id THEN 1 END) > 0
             ORDER BY wins DESC, last_win DESC NULLS LAST
             LIMIT 10
@@ -289,7 +290,6 @@ export class GameController {
 
             return {
                 name: player.name,
-                email: player.email,
                 wins: player.wins,
                 totalGames: player.total_games,
                 streak,
@@ -344,11 +344,11 @@ export class GameController {
         return Promise.all(games.map(async (game) => {
             const players = await this.prisma.user.findMany({
                 where: { id: { in: game.players } },
-                select: { id: true, name: true, email: true }
+                select: { id: true, name: true }
             });
 
-            const player1 = players[0] ? (players[0].name || players[0].email.split('@')[0]) : 'Waiting...';
-            const player2 = players[1] ? (players[1].name || players[1].email.split('@')[0]) : 'Waiting...';
+            const player1 = players[0] ? (players[0].name || 'Player 1') : 'Waiting...';
+            const player2 = players[1] ? (players[1].name || 'Player 2') : 'Waiting...';
 
             return {
                 id: game.id,
@@ -386,8 +386,6 @@ export class GameController {
             select: {
                 id: true,
                 name: true,
-                email: true,
-                // avatar: true // Assuming avatar might exist in future or use placeholder
             }
         });
 
