@@ -4,15 +4,50 @@ import { GameService } from '../services/game.service.js';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard.js';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { ConfigService } from '@nestjs/config';
 import { PoolEngine } from '../engine/PoolEngine.js';
+import { createHmac } from 'crypto';
 
 @ApiTags('Game')
 @Controller('game')
 export class GameController {
     constructor(
         private readonly gameService: GameService,
-        private readonly prisma: PrismaService
+        private readonly prisma: PrismaService,
+        private readonly configService: ConfigService,
     ) { }
+
+    @Get('turn-credentials')
+    @UseGuards(JwtAuthGuard)
+    @ApiBearerAuth('JWT-auth')
+    @ApiOperation({ summary: 'Get time-limited TURN credentials for WebRTC voice chat' })
+    getTurnCredentials(@Request() req: any) {
+        const secret = this.configService.get<string>('TURN_SECRET');
+        const host = this.configService.get<string>('TURN_HOST') || 'api.playpotta.com';
+
+        if (!secret) {
+            return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+        }
+
+        // Standard coturn time-limited credential scheme (RFC 5389)
+        const ttl = 86400; // 24 hours
+        const username = `${Math.floor(Date.now() / 1000) + ttl}:${req.user.id}`;
+        const credential = createHmac('sha1', secret).update(username).digest('base64');
+
+        return {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                {
+                    urls: [
+                        `turn:${host}:3478`,
+                        `turn:${host}:3478?transport=tcp`,
+                    ],
+                    username,
+                    credential,
+                },
+            ],
+        };
+    }
 
     /**
      * Demo Shot Endpoint - Uses real physics engine for demo page

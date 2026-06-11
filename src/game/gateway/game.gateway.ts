@@ -575,9 +575,10 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const game = await this.gameService.getGame(data.gameId);
         if (!game || !game.players.includes(userId)) {
             client.emit('error', { message: 'Unable to join this game.' });
-            return;
+            return { error: 'Unable to join this game.' };
         }
         client.join(data.gameId);
+        return { ok: true };
     }
 
     @SubscribeMessage('playerReady')
@@ -595,6 +596,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         // 1. Recovery: If game started, just send them the state immediately.
         if (game && game.mode.isStarted()) {
             console.log(`[PlayerReady] Game ${data.gameId} already started. Sending state to ${userId}`);
+            // Ensure the client is in the room before sending so they can receive future broadcasts
+            client.join(data.gameId);
             client.emit('startMatch', {
                 gameId: data.gameId,
                 startTime: Date.now(),
@@ -607,6 +610,11 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             client.emit('error', { message: 'Unable to mark ready for this game.' });
             return;
         }
+
+        // Ensure the socket is in the game room before we potentially emit startMatch.
+        // joinGame also does this, but it runs concurrently and may not have completed yet.
+        client.join(data.gameId);
+
         if (!this.readyPlayers.has(data.gameId)) {
             this.readyPlayers.set(data.gameId, new Set());
         }
