@@ -640,6 +640,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
+    @SubscribeMessage('stickMove')
+    handleStickMove(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; userId: string; angle: number },
+    ): void {
+        client.to(data.gameId).emit('opponentStickMove', { angle: data.angle });
+    }
+
     @SubscribeMessage('leaveQueue')
     async handleLeaveQueue(@ConnectedSocket() client: Socket) {
         const userId = await this.authenticateSocket(client);
