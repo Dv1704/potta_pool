@@ -149,7 +149,9 @@ export class TurnMode extends GameMode {
     private handleEightBallPocketed(playerId: string) {
         this.isGameOver = true;
         const group = this.playerGroups[playerId];
-        if (this.getRemainingBallsInGroup(group) === 0 && !this.foulOccurred) {
+        const hasClearedGroup = group !== BallGroup.NONE && this.getRemainingBallsInGroup(group) === 0;
+
+        if (hasClearedGroup && !this.foulOccurred) {
             this.winner = playerId;
         } else {
             this.winner = this.players.find(id => id !== playerId)!;

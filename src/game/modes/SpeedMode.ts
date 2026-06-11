@@ -1,5 +1,5 @@
 import { GameMode, GameState } from './GameMode.js';
-import { ShotResult } from '../engine/PoolEngine.js';
+import { PoolEngine, ShotResult } from '../engine/PoolEngine.js';
 import * as Constants from '../engine/Constants.js';
 
 export class SpeedMode extends GameMode {
@@ -7,10 +7,12 @@ export class SpeedMode extends GameMode {
     private readonly GAME_DURATION_MS = 60000; // 60 seconds overall game clock
     private scores: { [playerId: string]: number } = {};
     private streaks: { [playerId: string]: number } = {};
+    private engines: { [playerId: string]: PoolEngine } = {};
 
     constructor(players: string[]) {
-        super(players, Constants.GAME_MODE_NINE); // Using 9-ball rules for Speed Mode
+        super(players, Constants.GAME_MODE_NINE); // Initializing super class
         this.players.forEach(p => {
+            this.engines[p] = new PoolEngine(Constants.GAME_MODE_NINE); // Independent table per player
             this.scores[p] = 0;
             this.streaks[p] = 0;
         });
@@ -25,7 +27,10 @@ export class SpeedMode extends GameMode {
         if (this.isGameOver) throw new Error('Game is already over');
         if (!this.isGameStarted) throw new Error('Game has not started yet');
 
-        const result = this.engine.executeShot(angle, power, sideSpin, backSpin, cueBallX, cueBallY);
+        const engine = this.engines[playerId];
+        if (!engine) throw new Error('Player not found in game');
+
+        const result = engine.executeShot(angle, power, sideSpin, backSpin, cueBallX, cueBallY);
 
         // Convert animation frames back to percentages for frontend (0-100%)
         result.animationFrames = result.animationFrames.map(frame => {
@@ -39,26 +44,22 @@ export class SpeedMode extends GameMode {
             return converted;
         });
 
-        // Cue ball scratch = immediate foul, player loses
+        // Cue ball scratch = foul, player loses streak (no instant loss)
         if (result.cueBallScratched) {
-            this.isGameOver = true;
             this.streaks[playerId] = 0;
-            const opponent = this.players.find(p => p !== playerId);
-            this.winner = opponent || '';
-            return result;
-        }
+        } else {
+            // 9-ball rules foul detection:
+            // - No ball hit (firstBallCollided === null)
+            const isFoul = result.firstBallCollided === null;
+            const pottedObjectBalls = result.pocketedBalls.filter(id => id !== 0);
+            const numPocketed = pottedObjectBalls.length;
 
-        // 9-ball rules foul detection:
-        // - No ball hit (firstBallCollided === null)
-        const isFoul = result.firstBallCollided === null;
-        const pottedObjectBalls = result.pocketedBalls.filter(id => id !== 0);
-        const numPocketed = pottedObjectBalls.length;
-
-        if (!isFoul && numPocketed > 0) {
-            this.scores[playerId] = (this.scores[playerId] || 0) + numPocketed;
-            this.streaks[playerId] = (this.streaks[playerId] || 0) + 1;
-        } else if (isFoul) {
-            this.streaks[playerId] = 0;
+            if (!isFoul && numPocketed > 0) {
+                this.scores[playerId] = (this.scores[playerId] || 0) + numPocketed;
+                this.streaks[playerId] = (this.streaks[playerId] || 0) + 1;
+            } else if (isFoul) {
+                this.streaks[playerId] = 0;
+            }
         }
 
         this.updateStatus();
@@ -84,7 +85,7 @@ export class SpeedMode extends GameMode {
             } else if (streak2 > streak1) {
                 this.winner = p2;
             } else {
-                this.winner = p1;
+                this.winner = p1; // Tie breaker fallback
             }
         }
     }
@@ -98,33 +99,48 @@ export class SpeedMode extends GameMode {
             return true;
         }
 
-        const balls = this.engine.getBalls();
-        const remainingBalls = balls.filter(b => b.getNumber() !== 0 && b.isBallOnTable()).length;
+        // Check if any player has potted all balls
+        for (const playerId of this.players) {
+            const engine = this.engines[playerId];
+            if (!engine) continue;
+            
+            const balls = engine.getBalls();
+            const remainingBalls = balls.filter(b => b.getNumber() !== 0 && b.isBallOnTable()).length;
 
-        if (remainingBalls === 0) {
-            this.handleGameEndByTime();
-            return true;
+            if (remainingBalls === 0) {
+                this.isGameOver = true;
+                this.winner = playerId; // Instant win for clearing the table
+                return true;
+            }
         }
 
         return false;
     }
 
     getGameState(): GameState {
-        const balls = this.engine.getBalls();
-        const ballStates: any = {};
-        balls.forEach(b => {
-            ballStates[b.getNumber()] = {
-                x: (b.getX() / Constants.CANVAS_WIDTH) * 100,
-                y: (b.getY() / Constants.CANVAS_HEIGHT) * 100,
-                onTable: b.isBallOnTable()
-            };
-        });
+        const playerBalls: any = {};
+        for (const playerId of this.players) {
+            const engine = this.engines[playerId];
+            if (!engine) continue;
+
+            const balls = engine.getBalls();
+            const ballStates: any = {};
+            balls.forEach(b => {
+                ballStates[b.getNumber()] = {
+                    x: (b.getX() / Constants.CANVAS_WIDTH) * 100,
+                    y: (b.getY() / Constants.CANVAS_HEIGHT) * 100,
+                    onTable: b.isBallOnTable()
+                };
+            });
+            playerBalls[playerId] = ballStates;
+        }
 
         const elapsedGameTime = this.isGameStarted ? Date.now() - this.gameStartTime : 0;
         const overallTimeRemaining = Math.max(0, Math.ceil((this.GAME_DURATION_MS - elapsedGameTime) / 1000));
 
         return {
-            balls: ballStates,
+            balls: {}, // Legacy fallback
+            playerBalls: playerBalls,
             isGameOver: this.isGameOver,
             winner: this.winner,
             isGameStarted: this.isGameStarted,
@@ -135,12 +151,28 @@ export class SpeedMode extends GameMode {
     }
 
     serialize(): any {
+        const engineStates: any = {};
+        for (const playerId of this.players) {
+            if (this.engines[playerId]) {
+                const b = this.engines[playerId].getBalls();
+                const ballStates: any = {};
+                b.forEach(ball => {
+                    ballStates[ball.getNumber()] = {
+                        x: ball.getX(),
+                        y: ball.getY(),
+                        onTable: ball.isBallOnTable()
+                    }
+                });
+                engineStates[playerId] = ballStates;
+            }
+        }
+
         return {
             turnIndex: this.currentTurnIndex,
             isGameOver: this.isGameOver,
             isGameStarted: this.isGameStarted,
             winner: this.winner,
-            balls: this.getGameState().balls,
+            engineStates: engineStates,
             gameStartTime: this.gameStartTime,
             scores: this.scores,
             streaks: this.streaks
@@ -156,15 +188,35 @@ export class SpeedMode extends GameMode {
         this.scores = state.scores || {};
         this.streaks = state.streaks || {};
 
-        const balls = this.getBalls();
-        for (const ball of balls) {
-            const bState = state.balls[ball.getNumber()];
-            if (bState) {
-                ball.setPos(
-                    (bState.x / 100) * Constants.CANVAS_WIDTH,
-                    (bState.y / 100) * Constants.CANVAS_HEIGHT
-                );
-                ball.setFlagOnTable(bState.onTable);
+        if (state.engineStates) {
+            for (const playerId of this.players) {
+                if (this.engines[playerId] && state.engineStates[playerId]) {
+                    const engineBalls = this.engines[playerId].getBalls();
+                    for (const ball of engineBalls) {
+                        const bState = state.engineStates[playerId][ball.getNumber()];
+                        if (bState) {
+                            ball.setPos(bState.x, bState.y);
+                            ball.setFlagOnTable(bState.onTable);
+                        }
+                    }
+                }
+            }
+        } else if (state.balls) {
+            // Fallback for older legacy format
+            for (const playerId of this.players) {
+                if (this.engines[playerId]) {
+                    const engineBalls = this.engines[playerId].getBalls();
+                    for (const ball of engineBalls) {
+                        const bState = state.balls[ball.getNumber()];
+                        if (bState) {
+                            ball.setPos(
+                                (bState.x / 100) * Constants.CANVAS_WIDTH,
+                                (bState.y / 100) * Constants.CANVAS_HEIGHT
+                            );
+                            ball.setFlagOnTable(bState.onTable);
+                        }
+                    }
+                }
             }
         }
     }
