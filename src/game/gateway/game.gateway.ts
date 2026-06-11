@@ -715,6 +715,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit('roomCreated', { code, mode: data.mode, stake });
     }
 
+    @SubscribeMessage('getMyRoom')
+    async handleGetMyRoom(@ConnectedSocket() client: Socket) {
+        const userId = await this.authenticateSocket(client);
+        for (const [code, room] of this.privateRooms.entries()) {
+            if (room.creatorId === userId) {
+                // Refresh socket ID so matchFound reaches their new connection
+                room.creatorSocketId = client.id;
+                client.emit('myRoom', { found: true, code, mode: room.mode, stake: room.stake });
+                return;
+            }
+        }
+        client.emit('myRoom', { found: false });
+    }
+
     @SubscribeMessage('joinPrivateRoom')
     async handleJoinPrivateRoom(
         @ConnectedSocket() client: Socket,
