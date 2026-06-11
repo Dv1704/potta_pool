@@ -56,7 +56,7 @@ describe('SpeedMode', () => {
         mockExecute.mockRestore();
     });
 
-    it('should not add score for a foul and still return no turn field', () => {
+    it('should end game immediately when player scratches cue ball and opponent wins', () => {
         const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot').mockReturnValue({
             cueBallScratched: true,
             firstBallCollided: 1,
@@ -68,9 +68,51 @@ describe('SpeedMode', () => {
         speedMode.handleShot('player1', 0, 10, 0, 0);
         const state = speedMode.getGameState() as any;
 
-        expect(state.scores['player1']).toBe(0);
-        expect(state.turn).toBeUndefined();
-        expect(state.overallTimeRemaining).toBeGreaterThanOrEqual(0);
+        expect(state.isGameOver).toBe(true);
+        expect(state.winner).toBe('player2'); // Opponent wins
+        expect(state.scores['player1']).toBe(0); // Cue ball scratch = no score
+        expect(state.streaks['player1']).toBe(0);
+
+        mockExecute.mockRestore();
+    });
+
+    it('should end game when player2 scratches and player1 wins', () => {
+        const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot').mockReturnValue({
+            cueBallScratched: true,
+            firstBallCollided: 1,
+            pocketedBalls: [],
+            events: [],
+            animationFrames: []
+        });
+
+        speedMode.handleShot('player2', 0, 10, 0, 0);
+        const state = speedMode.getGameState() as any;
+
+        expect(state.isGameOver).toBe(true);
+        expect(state.winner).toBe('player1');
+
+        mockExecute.mockRestore();
+    });
+
+    it('should reset streak on foul but continue game', () => {
+        const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot').mockReturnValue({
+            cueBallScratched: false,
+            firstBallCollided: null, // No ball hit = foul
+            pocketedBalls: [],
+            events: [],
+            animationFrames: []
+        });
+
+        // First, build up a streak
+        (speedMode as any).streaks['player1'] = 5;
+
+        // Then foul
+        speedMode.handleShot('player1', 0, 10, 0, 0);
+        const state = speedMode.getGameState() as any;
+
+        expect(state.isGameOver).toBe(false); // Game continues
+        expect(state.streaks['player1']).toBe(0); // Streak reset
+        expect(state.scores['player1']).toBe(0); // No score for foul
 
         mockExecute.mockRestore();
     });
@@ -146,4 +188,98 @@ describe('SpeedMode', () => {
 
         mockExecute.mockRestore();
     });
+
+    it('should correctly assign winner when player1 has higher score', () => {
+        const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot').mockReturnValue({
+            cueBallScratched: false,
+            firstBallCollided: 1,
+            pocketedBalls: [1, 2],
+            events: [],
+            animationFrames: []
+        });
+
+        // Player1 pots 2 balls twice = 4 points
+        speedMode.handleShot('player1', 0, 10, 0, 0);
+        speedMode.handleShot('player1', 0, 10, 0, 0);
+
+        // Player2 pots 2 balls once = 2 points
+        speedMode.handleShot('player2', 0, 10, 0, 0);
+
+        // End game
+        (speedMode as any).gameStartTime = Date.now() - 61000;
+        speedMode.updateStatus();
+
+        expect(speedMode.getWinner()).toBe('player1');
+        const state = speedMode.getGameState() as any;
+        expect(state.scores['player1']).toBe(4);
+        expect(state.scores['player2']).toBe(2);
+
+        mockExecute.mockRestore();
+    });
+
+    it('should correctly assign winner when player2 has higher score', () => {
+        const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot').mockReturnValue({
+            cueBallScratched: false,
+            firstBallCollided: 1,
+            pocketedBalls: [3, 4, 5],
+            events: [],
+            animationFrames: []
+        });
+
+        // Player1 pots 3 balls once = 3 points
+        speedMode.handleShot('player1', 0, 10, 0, 0);
+
+        // Player2 pots 3 balls twice = 6 points
+        speedMode.handleShot('player2', 0, 10, 0, 0);
+        speedMode.handleShot('player2', 0, 10, 0, 0);
+
+        // End game
+        (speedMode as any).gameStartTime = Date.now() - 61000;
+        speedMode.updateStatus();
+
+        expect(speedMode.getWinner()).toBe('player2');
+        const state = speedMode.getGameState() as any;
+        expect(state.scores['player1']).toBe(3);
+        expect(state.scores['player2']).toBe(6);
+
+        mockExecute.mockRestore();
+    });
+
+    it('should real-world scenario: player2 scratches after player1 has scored, player1 wins', () => {
+        const mockExecute = jest.spyOn((speedMode as any).engine, 'executeShot');
+
+        // First shot: Player1 scores
+        mockExecute.mockReturnValueOnce({
+            cueBallScratched: false,
+            firstBallCollided: 1,
+            pocketedBalls: [1, 2, 3],
+            events: [],
+            animationFrames: []
+        });
+
+        speedMode.handleShot('player1', 0, 10, 0, 0);
+        let state = speedMode.getGameState() as any;
+        expect(state.scores['player1']).toBe(3);
+        expect(state.isGameOver).toBe(false);
+
+        // Second shot: Player2 scratches
+        mockExecute.mockReturnValueOnce({
+            cueBallScratched: true,
+            firstBallCollided: 1,
+            pocketedBalls: [0], // Cue ball scratched
+            events: [],
+            animationFrames: []
+        });
+
+        speedMode.handleShot('player2', 0, 10, 0, 0);
+        state = speedMode.getGameState() as any;
+
+        expect(state.isGameOver).toBe(true);
+        expect(state.winner).toBe('player1'); // Player1 wins because player2 scratched
+        expect(state.scores['player1']).toBe(3);
+        expect(state.scores['player2']).toBe(0);
+
+        mockExecute.mockRestore();
+    });
 });
+

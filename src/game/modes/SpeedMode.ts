@@ -39,17 +39,25 @@ export class SpeedMode extends GameMode {
             return converted;
         });
 
+        // Cue ball scratch = immediate foul, player loses
+        if (result.cueBallScratched) {
+            this.isGameOver = true;
+            this.streaks[playerId] = 0;
+            const opponent = this.players.find(p => p !== playerId);
+            this.winner = opponent || '';
+            return result;
+        }
+
         // 9-ball rules foul detection:
-        // - Cue ball scratch (cueBallScratched)
         // - No ball hit (firstBallCollided === null)
-        const isFoul = result.cueBallScratched || result.firstBallCollided === null;
+        const isFoul = result.firstBallCollided === null;
         const pottedObjectBalls = result.pocketedBalls.filter(id => id !== 0);
         const numPocketed = pottedObjectBalls.length;
 
         if (!isFoul && numPocketed > 0) {
             this.scores[playerId] = (this.scores[playerId] || 0) + numPocketed;
             this.streaks[playerId] = (this.streaks[playerId] || 0) + 1;
-        } else {
+        } else if (isFoul) {
             this.streaks[playerId] = 0;
         }
 

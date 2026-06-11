@@ -454,6 +454,121 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         }
     }
 
+    @SubscribeMessage('voiceOffer')
+    async handleVoiceOffer(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; senderId?: string; offer: any },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        if (data.senderId && data.senderId !== userId) {
+            client.emit('error', { message: 'Payload senderId does not match authenticated user' });
+            return;
+        }
+
+        try {
+            const game = await this.gameService.getGame(data.gameId);
+            if (!game || !game.players.includes(userId)) {
+                client.emit('error', { message: 'Unable to send voice offer for this game.' });
+                return;
+            }
+
+            this.server.to(data.gameId).emit('voiceOffer', {
+                gameId: data.gameId,
+                senderId: userId,
+                offer: data.offer,
+            });
+        } catch (error: any) {
+            console.error(`[VoiceOffer] Error from user ${userId}: ${error?.message}`);
+            client.emit('error', { message: error?.message || 'Failed to forward voice offer' });
+        }
+    }
+
+    @SubscribeMessage('voiceAnswer')
+    async handleVoiceAnswer(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; senderId?: string; answer: any },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        if (data.senderId && data.senderId !== userId) {
+            client.emit('error', { message: 'Payload senderId does not match authenticated user' });
+            return;
+        }
+
+        try {
+            const game = await this.gameService.getGame(data.gameId);
+            if (!game || !game.players.includes(userId)) {
+                client.emit('error', { message: 'Unable to send voice answer for this game.' });
+                return;
+            }
+
+            this.server.to(data.gameId).emit('voiceAnswer', {
+                gameId: data.gameId,
+                senderId: userId,
+                answer: data.answer,
+            });
+        } catch (error: any) {
+            console.error(`[VoiceAnswer] Error from user ${userId}: ${error?.message}`);
+            client.emit('error', { message: error?.message || 'Failed to forward voice answer' });
+        }
+    }
+
+    @SubscribeMessage('voiceCandidate')
+    async handleVoiceCandidate(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; senderId?: string; candidate: any },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        if (data.senderId && data.senderId !== userId) {
+            client.emit('error', { message: 'Payload senderId does not match authenticated user' });
+            return;
+        }
+
+        try {
+            const game = await this.gameService.getGame(data.gameId);
+            if (!game || !game.players.includes(userId)) {
+                client.emit('error', { message: 'Unable to send ICE candidate for this game.' });
+                return;
+            }
+
+            this.server.to(data.gameId).emit('voiceCandidate', {
+                gameId: data.gameId,
+                senderId: userId,
+                candidate: data.candidate,
+            });
+        } catch (error: any) {
+            console.error(`[VoiceCandidate] Error from user ${userId}: ${error?.message}`);
+            client.emit('error', { message: error?.message || 'Failed to forward ICE candidate' });
+        }
+    }
+
+    @SubscribeMessage('voiceHangup')
+    async handleVoiceHangup(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { gameId: string; senderId?: string },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        if (data.senderId && data.senderId !== userId) {
+            client.emit('error', { message: 'Payload senderId does not match authenticated user' });
+            return;
+        }
+
+        try {
+            const game = await this.gameService.getGame(data.gameId);
+            if (!game || !game.players.includes(userId)) {
+                client.emit('error', { message: 'Unable to send voice hangup for this game.' });
+                return;
+            }
+
+            this.server.to(data.gameId).emit('voiceHangup', {
+                gameId: data.gameId,
+                senderId: userId,
+            });
+        } catch (error: any) {
+            console.error(`[VoiceHangup] Error from user ${userId}: ${error?.message}`);
+            client.emit('error', { message: error?.message || 'Failed to forward voice hangup' });
+        }
+    }
+
     @SubscribeMessage('joinGame')
     async handleJoinGame(@ConnectedSocket() client: Socket, @MessageBody() data: { gameId: string }) {
         const userId = await this.authenticateSocket(client);
