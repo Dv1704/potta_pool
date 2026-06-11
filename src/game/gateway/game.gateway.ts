@@ -36,6 +36,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     private lastShotTime: Map<string, number> = new Map();
     private readyPlayers: Map<string, Set<string>> = new Map();
+    private privateRooms: Map<string, { mode: 'speed' | 'turn'; stake: number; creatorId: string; creatorSocketId: string }> = new Map();
 
     constructor(
         @Inject(MatchmakingService) private matchmakingService: MatchmakingService,
@@ -652,6 +653,137 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     async handleLeaveQueue(@ConnectedSocket() client: Socket) {
         const userId = await this.authenticateSocket(client);
         await this.matchmakingService.removeFromQueue(userId);
+    }
+
+    @SubscribeMessage('lookupRoom')
+    async handleLookupRoom(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { code: string },
+    ) {
+        await this.authenticateSocket(client);
+        const code = (data.code || '').toUpperCase().trim();
+        const room = this.privateRooms.get(code);
+
+        if (!room) {
+            client.emit('roomLookup', { found: false });
+            return;
+        }
+
+        const creator = await this.prisma.user.findUnique({
+            where: { id: room.creatorId },
+            select: { name: true, email: true },
+        });
+
+        client.emit('roomLookup', {
+            found: true,
+            code,
+            mode: room.mode,
+            stake: room.stake,
+            creatorName: creator?.name || creator?.email?.split('@')[0] || 'Player',
+        });
+    }
+
+    @SubscribeMessage('createPrivateRoom')
+    async handleCreatePrivateRoom(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { mode: 'speed' | 'turn'; stake?: number },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        this.assertMode(data.mode);
+        const stake = data.stake ?? 0;
+        if (stake > 0 && stake < 10) {
+            client.emit('error', { message: 'Minimum stake is GH₵10.' });
+            return;
+        }
+
+        // Cancel any existing private room this user created
+        for (const [code, room] of this.privateRooms.entries()) {
+            if (room.creatorId === userId) this.privateRooms.delete(code);
+        }
+
+        // Generate unique 6-char alphanumeric code
+        let code: string;
+        do {
+            code = Math.random().toString(36).slice(2, 8).toUpperCase();
+        } while (this.privateRooms.has(code));
+
+        this.privateRooms.set(code, { mode: data.mode, stake, creatorId: userId, creatorSocketId: client.id });
+        // Auto-expire after 15 minutes
+        setTimeout(() => this.privateRooms.delete(code), 15 * 60 * 1000);
+
+        console.log(`[PrivateRoom] ${userId} created room ${code} (mode=${data.mode}, stake=${stake})`);
+        client.emit('roomCreated', { code, mode: data.mode, stake });
+    }
+
+    @SubscribeMessage('joinPrivateRoom')
+    async handleJoinPrivateRoom(
+        @ConnectedSocket() client: Socket,
+        @MessageBody() data: { code: string },
+    ) {
+        const userId = await this.authenticateSocket(client);
+        const code = (data.code || '').toUpperCase().trim();
+        const room = this.privateRooms.get(code);
+
+        if (!room) {
+            client.emit('error', { message: 'Room not found. Check the code and try again.' });
+            return;
+        }
+        if (room.creatorId === userId) {
+            client.emit('error', { message: 'You cannot join your own room.' });
+            return;
+        }
+
+        this.privateRooms.delete(code);
+
+        const playerIds = [room.creatorId, userId];
+        const gameId = uuidv4();
+
+        console.log(`[PrivateRoom] ${userId} joined room ${code}. Creating game ${gameId}...`);
+
+        try {
+            await this.gameService.createGame(gameId, playerIds, room.mode, room.stake);
+            const game = await this.gameService.getGame(gameId);
+
+            const players = await Promise.all(playerIds.map(async (pId) => {
+                const user = await this.prisma.user.findUnique({
+                    where: { id: pId },
+                    select: { id: true, name: true, email: true }
+                });
+                return { id: pId, name: user?.name || user?.email?.split('@')[0] || 'Player' };
+            }));
+
+            const participants = [
+                { userId: room.creatorId, socketId: room.creatorSocketId },
+                { userId, socketId: client.id },
+            ];
+
+            for (const p of participants) {
+                const sock = this.server.sockets.sockets.get(p.socketId);
+                if (sock) sock.join(gameId);
+
+                const opponentId = playerIds.find(id => id !== p.userId);
+                const opponent = players.find(pl => pl.id === opponentId);
+
+                this.server.to(p.socketId).emit('matchFound', {
+                    gameId,
+                    opponentId,
+                    opponentName: opponent?.name || 'Player',
+                    mode: room.mode,
+                    stake: room.stake,
+                    gameState: {
+                        ...game?.mode.getGameState(),
+                        players,
+                        stake: room.stake,
+                        betAmount: room.stake,
+                    },
+                });
+            }
+            console.log(`[PrivateRoom] Game ${gameId} started (${room.mode}, stake=${room.stake}).`);
+        } catch (error: any) {
+            console.error(`[PrivateRoom] Failed to create game: ${error.message}`);
+            client.emit('error', { message: 'Failed to start game: ' + error.message });
+            this.server.to(room.creatorSocketId).emit('error', { message: 'Friend match failed to start.' });
+        }
     }
 
     @SubscribeMessage('getGameState')
