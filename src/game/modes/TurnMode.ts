@@ -15,10 +15,14 @@ export class TurnMode extends GameMode {
     private turnExpiration: number = 0;
     private readonly SHOT_TIMEOUT_MS = 30000;
     private isBreakShot: boolean = true;
+    private scores: { [playerId: string]: number } = {};
 
     constructor(players: string[]) {
         super(players, Constants.GAME_MODE_EIGHT);
-        this.players.forEach(id => this.playerGroups[id] = BallGroup.NONE);
+        this.players.forEach(id => {
+            this.playerGroups[id] = BallGroup.NONE;
+            this.scores[id] = 0;
+        });
         // Timer does NOT start here.
     }
 
@@ -126,6 +130,18 @@ export class TurnMode extends GameMode {
             }
         }
 
+        // Count potted group balls toward player score
+        const objectBalls = result.pocketedBalls.filter(id => id !== 0 && id !== 8);
+        if (!this.foulOccurred && objectBalls.length > 0) {
+            const group = this.playerGroups[playerId];
+            objectBalls.forEach(num => {
+                const isMyBall = group === BallGroup.NONE ||
+                    (group === BallGroup.SOLIDS && num >= 1 && num <= 7) ||
+                    (group === BallGroup.STRIPES && num >= 9 && num <= 15);
+                if (isMyBall) this.scores[playerId] = (this.scores[playerId] || 0) + 1;
+            });
+        }
+
         if (result.pocketedBalls.includes(8)) this.handleEightBallPocketed(playerId);
     }
 
@@ -193,7 +209,8 @@ export class TurnMode extends GameMode {
             // Custom Turn Mode fields
             foulOccurred: this.foulOccurred,
             playerGroups: this.playerGroups,
-            groupAssigned: this.groupAssigned
+            groupAssigned: this.groupAssigned,
+            scores: this.scores
         } as any;
     }
 
@@ -208,6 +225,7 @@ export class TurnMode extends GameMode {
             groupAssigned: this.groupAssigned,
             foulOccurred: this.foulOccurred,
             isBreakShot: this.isBreakShot,
+            scores: this.scores,
             balls: this.getGameState().balls
         };
     }
@@ -222,6 +240,7 @@ export class TurnMode extends GameMode {
         this.groupAssigned = state.groupAssigned;
         this.foulOccurred = state.foulOccurred;
         this.isBreakShot = state.isBreakShot !== undefined ? state.isBreakShot : true;
+        this.scores = state.scores || {};
 
         const balls = this.getBalls();
         for (const ball of balls) {
